@@ -1,0 +1,100 @@
+# configurations for gene selector
+gene_selector:
+
+# list of paths to the directories of the given input data sets
+# directories must contain cell_labels.csv, genes_symbol.csv and matrix_sparse.npz
+# shapes of those files as given in the example (need better description!!)
+    paths:
+        - '/data/local/jdohmen/ikarus/data/sc_cancer/laughney20_lung/'
+        - '/data/local/jdohmen/ikarus/data/sc_cancer/lee20_crc/'
+
+# list of names of the given input data sets
+    names:
+        - 'laughney'
+        - 'lee'
+
+# directly load adata.h5ad instead
+    adata_is_given:
+        - False
+        - False
+
+# if False make data preprocessing
+    is_preprocessed:
+        - False
+        - False
+
+# string column name of adata.obs
+# this column contains the relevant cell labels
+    obs_name: 'tier_0'
+
+# String name of the cell type which should be considered as up-regulated
+    label_upreg: 'Tumor'
+
+# String name of the cell type which should be considered as down-regulated
+# label_upreg is compared to label_downreg
+# if None, label_upreg is compared to everything else in obs_name
+    label_downreg: 'Normal'
+
+# genes are excluded if logfoldchanges < lfc_threshold
+    lfc_threshold: 3
+
+# genes are excluded if adjusted p val < pval_threshold
+    pval_threshold: 0.1
+
+# String name of the DE method
+# currently only the 't-test_overestim_var' and 't-test' is supported
+    DE_method: 't-test_overestim_var'
+
+# String column name of DE results DataFrame
+# sorting is done according to this column
+    sort_by: 'logfoldchanges'
+
+# Boolean corresponding to ascending (True) or descending (False) sorting
+    sort_ascending: False
+
+
+# configurations for gene list integrator
+gene_list_integrator:
+
+# integration function
+# currently only 'intersection' and 'union' are provided
+# should be easy to integrate own functions to integrate multiple DataFrames,
+# e.g. as variations of pd.concat()
+    integration_fun: 'intersection'
+
+# String column name of DE_results_df_0/1
+# the integration is done according to this column
+# integrated gene list is sorted according to the weighted avg of those columns (0/1)
+    integrate_by: 'logfoldchanges'
+
+# Boolean corresponding to ascending (True) or descending (False) sorting
+    sort_ascending: False
+
+# float from 0 to 1 corresponding to the fraction of genes to be used after sorting
+    fraction: 1
+
+
+# configurations for cell annotator
+cell_annotator:
+
+# path to the directory of the given input data set
+# directory must contain cell_labels.csv, genes_symbol.csv and matrix_sparse.npz
+# shapes of those files as given in the example (need better description!!)
+    path: '/data/local/jdohmen/ikarus/data/sc_cancer/lambrechts18_lung/'
+
+# name of the given input data set
+    name: 'lambrechts'
+
+# directly load adata.h5ad instead
+    adata_is_given: False
+
+# if False make data preprocessing
+    is_preprocessed: False
+
+# use the first n cells for test reason
+# None, if using all cells
+    n_cells: 100
+
+# string column name of adata.obs
+# this column contains the cells that should get annotated
+    obs_name: 'tier_0'
