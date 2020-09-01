@@ -100,7 +100,8 @@ all_scores, all_scores_scaled, adata_out = cell_annotator(
     singscore_fun,
     config['cell_annotator']['obs_name'])
 
-adata_out.write(config['cell_annotator']['path'] + 'adata_out.h5ad')
+adata_out.write(f"out/{config['gene_selector']['label_upreg']}_adata.h5ad")
+
 all_scores.to_csv(
     f"out/{config['gene_selector']['label_upreg']}_score.csv",
     index_label='cells'
