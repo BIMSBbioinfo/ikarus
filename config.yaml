@@ -32,7 +32,7 @@ gene_selector:
 
 # String name of the cell type which should be considered as down-regulated
 # label_upreg is compared to label_downreg
-# if None, label_upreg is compared to everything else in obs_name
+# if null, label_upreg is compared to everything else in obs_name
     label_downreg: 'Normal'
 
 # genes are excluded if logfoldchanges < lfc_threshold
@@ -92,7 +92,7 @@ cell_annotator:
     is_preprocessed: False
 
 # use the first n cells for test reason
-# None, if using all cells
+# null, if using all cells
     n_cells: 100
 
 # string column name of adata.obs
