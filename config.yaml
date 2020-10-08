@@ -1,3 +1,12 @@
+# decide which subtasks to run
+run:
+    gene_selector: True
+    gene_list_integrator: True
+    cell_annotator: True
+    
+    
+
+
 # configurations for gene selector
 gene_selector:
 
@@ -15,28 +24,28 @@ gene_selector:
 
 # directly load adata.h5ad instead
     adata_is_given:
-        - False
-        - False
+        - True
+        - True
 
 # if False make data preprocessing
     is_preprocessed:
-        - False
-        - False
+        - True
+        - True
 
 # string column name of adata.obs
 # this column contains the relevant cell labels
-    obs_name: 'tier_0'
+    obs_name: 'tier_0_hallmark_corrected'
 
 # String name of the cell type which should be considered as up-regulated
-    label_upreg: 'Tumor'
+    label_upreg: 'Normal'
 
 # String name of the cell type which should be considered as down-regulated
 # label_upreg is compared to label_downreg
 # if null, label_upreg is compared to everything else in obs_name
-    label_downreg: 'Normal'
+    label_downreg: null
 
 # genes are excluded if logfoldchanges < lfc_threshold
-    lfc_threshold: 3
+    lfc_threshold: 1
 
 # genes are excluded if adjusted p val < pval_threshold
     pval_threshold: 0.1
@@ -56,6 +65,11 @@ gene_selector:
 # configurations for gene list integrator
 gene_list_integrator:
 
+    # If gene_list_integrator is run without gene_selector, DE results DataFrames must be given.
+    # Else, this is neglected.
+    DE_results_dfs:
+        -
+
 # integration function
 # currently only 'intersection' and 'union' are provided
 # should be easy to integrate own functions to integrate multiple DataFrames,
@@ -70,30 +84,42 @@ gene_list_integrator:
 # Boolean corresponding to ascending (True) or descending (False) sorting
     sort_ascending: False
 
-# float from 0 to 1 corresponding to the fraction of genes to be used after sorting
-    fraction: 1
+# integer corresponding to the amount of top genes to be used after sorting
+    top_x: 300
 
 
 # configurations for cell annotator
 cell_annotator:
 
+    # If solely cell_annotator is run, gene list(s) must be given as signature(s).
+    # Else, this is neglected.
+    gene_lists:
+        - 'out/Normal_refined_gene_list.csv'
+        - 'out/Tumor_refined_gene_list.csv'
+    
+    # If solely cell_annoator is run, upregulated label names must be given
+    # corresponding to the order of gene lists. Else, this is neglected.
+    label_upregs:
+        - 'Normal'
+        - 'Tumor'
+
 # path to the directory of the given input data set
 # directory must contain cell_labels.csv, genes_symbol.csv and matrix_sparse.npz
 # shapes of those files as given in the example (need better description!!)
-    path: '/data/local/jdohmen/ikarus/data/sc_cancer/lambrechts18_lung/'
+    path: '/data/local/jdohmen/ikarus/data/sc_cancer/yeung13_ovarian/'
 
 # name of the given input data set
-    name: 'lambrechts'
+    name: 'yeung'
 
 # directly load adata.h5ad instead
-    adata_is_given: False
+    adata_is_given: True
 
 # if False make data preprocessing
-    is_preprocessed: False
+    is_preprocessed: True
 
 # use the first n cells for test reason
 # null, if using all cells
-    n_cells: 100
+    n_cells: null
 
 # string column name of adata.obs
 # this column contains the cells that should get annotated

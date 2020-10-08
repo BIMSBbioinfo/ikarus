@@ -15,7 +15,7 @@ def preprocess_adata(adata):
 
 def load_adata(path, adata_is_given=False):
     if adata_is_given:
-        read_h5ad(f'{path}adata.h5ad')
+        adata = read_h5ad(f'{path}adata.h5ad')
     else:
         cl = pd.read_csv(f'{path}cell_labels.csv')
         genes = pd.read_csv(f'{path}genes_symbol.csv', header=None, names=['gene_symbol'])
@@ -43,6 +43,11 @@ def gene_selector(
                                  else 'Other' for label in adata.obs[obs_name]]
         obs_name = '1_vs_all'
         label_downreg = 'Other'
+
+    if label_downreg is not None:
+        unique_labels = np.unique(adata.obs[obs_name])
+        if label_upreg not in unique_labels or label_downreg not in unique_labels:
+            return None
 
     adata = sc.tl.rank_genes_groups(
         adata,
@@ -72,14 +77,17 @@ def gene_list_integrator(
     integration_fun,
     integrate_by='logfoldchanges',
     sort_ascending=False,
-    fraction=1
+    top_x=100
 ):
     dfs = [df.copy() for df in list_of_DE_results_df]
+    if len(dfs) == 0:
+        raise('Error: Neither input dataset contains either upregulated or downregulated labels.')
     for i, df in enumerate(dfs):
         dfs[i].set_index(df['gene_symbol'], inplace=True)
         dfs[i] = df[integrate_by]
         dfs[i].name = f'{integrate_by}{i}'
     DE_results_df = integration_fun(dfs)
+
     for i in range(len(dfs)):
         DE_results_df[f'{integrate_by}{i}'] /= DE_results_df[f'{integrate_by}{i}'].max()
     DE_results_df['weighted_avg'] = (
@@ -88,10 +96,11 @@ def gene_list_integrator(
         ]].mean(axis=1)
     )
     DE_results_df.sort_values(by='weighted_avg', ascending=sort_ascending, inplace=True)
+    DE_results_df[integrate_by] = DE_results_df['weighted_avg']
+    DE_results_df['gene_symbol'] = DE_results_df.index.values
 
     gene_list = list(DE_results_df.index.values)
-    fraction = min(1, max(0, fraction))
-    gene_list = gene_list[:int(len(gene_list) * fraction)]
+    gene_list = gene_list[:int(top_x)] if len(gene_list) >= top_x else gene_list
     return gene_list, DE_results_df
 
 
@@ -107,17 +116,28 @@ def cell_annotator(
 ):
     df = adata.to_df()
     df = df.T
-    all_scores = pd.DataFrame(index=adata.obs[obs_name].values)
-    all_scaled_scores = pd.DataFrame(index=adata.obs[obs_name].values)
     for label_upreg, gene_list in gene_list_dict.items():
+        all_scores = pd.DataFrame(index=adata.obs[obs_name].values)
+        all_scaled_scores = pd.DataFrame(index=adata.obs[obs_name].values)
         scores = scoring_fun(gene_list, df)
         scores = scores['total_score'].values
         all_scores[label_upreg] = scores
         all_scaled_scores[label_upreg] = ((scores - scores.min())
                                           / (scores.max() - scores.min()))
-    adata.obs[f'{label_upreg}_score'] = all_scores[label_upreg].values
-    adata.obs[f'{label_upreg}_scaled_score'] = all_scaled_scores[label_upreg].values
-    return all_scores, all_scaled_scores, adata
+        all_scores.to_csv(
+            f'out/{label_upreg}_score.csv',
+            index_label='cells'
+        )
+        all_scaled_scores.to_csv(
+            f'out/{label_upreg}_scaled_score.csv',
+            index_label='cells'
+        )
+        adata.obs[f'{label_upreg}_score'] = all_scores[label_upreg].values
+        adata.obs[f'{label_upreg}_scaled_score'] = all_scaled_scores[label_upreg].values
+
+    # adata_out.write(f"out/scored_adata.h5ad")
+
+    # return all_scores, all_scaled_scores, adata
 
 
 def singscore_fun(gene_list, df):
