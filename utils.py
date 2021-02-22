@@ -148,3 +148,33 @@ def singscore_fun(gene_list, df):
         norm_method='standard',
         full_data=False
     )
+
+
+def cell_annotator(
+    adatas_dict,
+    scores_dict,
+    usage_list
+):
+    None
+
+def label_propagation(
+    adatas_dict,
+    connectivities_dict,
+    scores_dict,
+    usage_list
+):
+    None
+
+def load_scores(
+    adatas_dict
+):
+    None
+
+def calculate_connectivities(
+    adatas_dict
+):
+    None
+
+def load_connectivities(
+    names_list
+)

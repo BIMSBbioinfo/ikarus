@@ -102,7 +102,7 @@ if config['run']['gene_list_integrator']:
     )
 
 
-# cell annotation
+# cell scoring
 if config['run']['cell_scorer']:
     adatas = {}
     adata = load_adata(
@@ -135,3 +135,13 @@ if config['run']['cell_scorer']:
         singscore_fun,
         config['cell_scorer']['obs_name'])
 
+
+# cell annotation
+if config['run']['cell_annotator']:
+    paths = config['cell_annotator']['paths']
+    names = config['cell_annotator']['names']
+    usage = config['cell_annotator']['usage']
+
+    scores = {}
+    adatas = {}
+    connectivities = {}

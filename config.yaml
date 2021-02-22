@@ -128,17 +128,23 @@ cell_scorer:
 
 
 # configurations for cell annotator
+# currently only available for tumor vs normal classification
 cell_annotator:
 
-    # If solely cell_annotator is run, scores for training and target data set must
-    # given. Else, this is neglected.
-    dataset_names:
+    # paths to the datasets
+    paths:
+        - '/data/local/jdohmen/ikarus/data/sc_cancer/laughney20_lung/'
+        - '/data/local/jdohmen/ikarus/data/sc_cancer/lee20_crc/'
+        - '/data/local/jdohmen/ikarus/data/sc_cancer/lambrechts18_lung/'
+
+    # Names of the datasets
+    names:
         - 'laughney'
         - 'lee'
         - 'lambrechts'
     
     # Provide information: either 'training' or 'test'
-    dataset_type:
+    usage:
         - 'training'
         - 'training'
         - 'test'
