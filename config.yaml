@@ -2,6 +2,7 @@
 run:
     gene_selector: True
     gene_list_integrator: True
+    cell_scorer: True
     cell_annotator: True
     
     
@@ -88,16 +89,16 @@ gene_list_integrator:
     top_x: 300
 
 
-# configurations for cell annotator
-cell_annotator:
+# configurations for cell scorer
+cell_scorer:
 
-    # If solely cell_annotator is run, gene list(s) must be given as signature(s).
+    # If solely cell_scorer is run, gene list(s) must be given as signature(s).
     # Else, this is neglected.
     gene_lists:
         - 'out/Normal_refined_gene_list.csv'
         - 'out/Tumor_refined_gene_list.csv'
     
-    # If solely cell_annoator is run, upregulated label names must be given
+    # If solely cell_scorer is run, upregulated label names must be given
     # corresponding to the order of gene lists. Else, this is neglected.
     label_upregs:
         - 'Normal'
@@ -124,3 +125,26 @@ cell_annotator:
 # string column name of adata.obs
 # this column contains the cells that should get annotated
     obs_name: 'tier_0'
+
+
+# configurations for cell annotator
+cell_annotator:
+
+    # If solely cell_annotator is run, scores for training and target data set must
+    # given. Else, this is neglected.
+    dataset_names:
+        - 'laughney'
+        - 'lee'
+        - 'lambrechts'
+    
+    # Provide information: either 'training' or 'test'
+    dataset_type:
+        - 'training'
+        - 'training'
+        - 'test'
+
+    # connectivities already given, else this will be calculated
+    connectivities_given: False
+
+    # label propagation already done, else this will be calculated
+    label_propagation_done: False

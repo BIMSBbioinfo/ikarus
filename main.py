@@ -103,35 +103,35 @@ if config['run']['gene_list_integrator']:
 
 
 # cell annotation
-if config['run']['cell_annotator']:
+if config['run']['cell_scorer']:
     adatas = {}
     adata = load_adata(
-        config['cell_annotator']['path'],
-        config['cell_annotator']['adata_is_given']
+        config['cell_scorer']['path'],
+        config['cell_scorer']['adata_is_given']
     )
-    adatas[config['cell_annotator']['name']] = (
-        adata if config['cell_annotator']['is_preprocessed'] else preprocess_adata(adata)
+    adatas[config['cell_scorer']['name']] = (
+        adata if config['cell_scorer']['is_preprocessed'] else preprocess_adata(adata)
     )
 
-    if not config['cell_annotator']['adata_is_given'] and not config['cell_annotator']['is_preprocessed']:
-        adatas[config['cell_annotator']['name']].write(config['cell_annotator']['path'] + 'adata.h5ad')
+    if not config['cell_scorer']['adata_is_given'] and not config['cell_scorer']['is_preprocessed']:
+        adatas[config['cell_scorer']['name']].write(config['cell_scorer']['path'] + 'adata.h5ad')
     # use first n cells for test reason
-    adatas[config['cell_annotator']['name']] = (
-        adatas[config['cell_annotator']['name']][:config['cell_annotator']['n_cells']]
+    adatas[config['cell_scorer']['name']] = (
+        adatas[config['cell_scorer']['name']][:config['cell_scorer']['n_cells']]
     )
 
     if config['run']['gene_list_integrator']:
         gene_list_dict = {config['gene_selector']['label_upreg']: gene_list}
     else:
         gene_lists = [
-            pd.read_csv(gl, header=None).values.ravel().tolist() for gl in config['cell_annotator']['gene_lists']
+            pd.read_csv(gl, header=None).values.ravel().tolist() for gl in config['cell_scorer']['gene_lists']
         ]
-        label_upregs = config['cell_annotator']['label_upregs']
+        label_upregs = config['cell_scorer']['label_upregs']
         gene_list_dict = dict(zip(label_upregs, gene_lists))
 
-    cell_annotator(
-        adatas[config['cell_annotator']['name']],
+    cell_scorer(
+        adatas[config['cell_scorer']['name']],
         gene_list_dict,
         singscore_fun,
-        config['cell_annotator']['obs_name'])
+        config['cell_scorer']['obs_name'])
 

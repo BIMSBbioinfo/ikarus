@@ -108,7 +108,7 @@ def intersection_fun(x): return pd.concat(x, axis=1, join='inner')
 def union_fun(x): return pd.concat(x, axis=1, join='outer')
 
 
-def cell_annotator(
+def cell_scorer(
     adata,
     gene_list_dict,
     scoring_fun,
