@@ -1,10 +1,7 @@
 import yaml
 import argparse
-import scipy
-import numpy as np
+from pathlib import Path
 import pandas as pd
-import scanpy as sc
-from PySingscore.singscore import singscore
 from utils import *
 
 
@@ -85,6 +82,7 @@ if config['run']['gene_list_integrator']:
         write_label_downreg = 'all'
     else:
         write_label_downreg = config['gene_selector']['label_downreg']
+    (Path.cwd() / 'out').mkdir(parents=True, exist_ok=True)
     pd.DataFrame(gene_list).to_csv(
         (
             f"out/{config['gene_selector']['label_upreg']}"
@@ -129,8 +127,10 @@ if config['run']['cell_scorer']:
         label_upregs = config['cell_scorer']['label_upregs']
         gene_list_dict = dict(zip(label_upregs, gene_lists))
 
+    (Path.cwd() / 'out' / f"{config['cell_scorer']['name']}").mkdir(parents=True, exist_ok=True)
     cell_scorer(
         adatas[config['cell_scorer']['name']],
+        config['cell_scorer']['name'],
         gene_list_dict,
         singscore_fun,
         config['cell_scorer']['obs_name'])
@@ -140,24 +140,38 @@ if config['run']['cell_scorer']:
 if config['run']['cell_annotator']:
     paths = config['cell_annotator']['paths']
     names = config['cell_annotator']['names']
-    usages = config['cell_annotator']['usages']
+    test_name = config['cell_annotator']['test_name']
+    training_names = config['cell_annotator']['training_names']
 
-    scores = {}
+    results = {}
     adatas = {}
     connectivities = {}
 
-    for name, path, usage in zip(names, paths, usages):
+    for name, path in zip(names, paths):
         # adata
         adatas[name] = load_adata(path, adata_is_given=True)
-        
-        # connectivities
-        if usage == 'test':
-            if config['cell_annotator']['connectivities_given']:
-                connectivities[name] = load_connectivities(name, usage)
-            else:
-                connectivities[name] = calculate_connectivities(adatas[name], usage)
-        else:
-            connectivities[name] = None
 
         # scores
-        scores[name] = load_scores(name, adata)
+        results[name] = load_scores(name, adata)
+        
+    # connectivities
+    if config['cell_annotator']['connectivities_given']:
+        connectivities[test_name] = load_connectivities(test_name)
+    else:
+        connectivities[test_name] = calculate_connectivities(
+            adatas[test_name], 
+            n_neighbors=100,
+            use_highly_variable=False
+            )
+
+    # label propagation
+    cell_annotator(
+        adatas, 
+        connectivities, 
+        results,
+        names,
+        training_names,
+        test_name,
+        config['cell_annotator']['certainty_threshold'],
+        config['cell_annotator']['n_iter']
+        )

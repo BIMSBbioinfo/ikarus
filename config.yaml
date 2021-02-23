@@ -143,14 +143,25 @@ cell_annotator:
         - 'lee'
         - 'lambrechts'
     
-    # Provide information: either 'training' or 'test'
-    usages:
-        - 'training'
-        - 'training'
-        - 'test'
+    # Assign datasets to either training or test set
+    # currently just one test set allowed
+    # make sure that all datasets of the above are assigned!
+    training_names:
+        - 'laughney'
+        - 'lee'
+    
+    test_name: 'lambrechts'
 
     # connectivities already given, else this will be calculated
     connectivities_given: False
 
     # label propagation already done, else this will be calculated
     label_propagation_done: False
+
+    # threshold for the absolute difference of singscores for which the 
+    # prediction can be considered certain
+    # these are then used as root for label propagation
+    certainty_threshold: 0.3
+
+    # number of iterations for label propagation
+    n_iter: 15

@@ -1,9 +1,9 @@
-import yaml
 import scipy
 import numpy as np
 import pandas as pd
 import scanpy as sc
 from anndata import AnnData, read_h5ad
+from sklearn.linear_model import LogisticRegression
 from PySingscore.singscore import singscore
 
 
@@ -110,6 +110,7 @@ def union_fun(x): return pd.concat(x, axis=1, join='outer')
 
 def cell_scorer(
     adata,
+    name,
     gene_list_dict,
     scoring_fun,
     obs_name
@@ -125,11 +126,11 @@ def cell_scorer(
         all_scaled_scores[label_upreg] = ((scores - scores.min())
                                           / (scores.max() - scores.min()))
         all_scores.to_csv(
-            f'out/{label_upreg}_score.csv',
+            f'out/{name}/{label_upreg}_score.csv',
             index_label='cells'
         )
         all_scaled_scores.to_csv(
-            f'out/{label_upreg}_scaled_score.csv',
+            f'out/{name}/{label_upreg}_scaled_score.csv',
             index_label='cells'
         )
         adata.obs[f'{label_upreg}_score'] = all_scores[label_upreg].values
@@ -151,38 +152,119 @@ def singscore_fun(gene_list, df):
 
 
 def cell_annotator(
-    adatas_dict,
-    scores_dict,
-    usage_list
-):
-    None
-
-def label_propagation(
-    adatas_dict,
     connectivities_dict,
-    scores_dict,
-    usage_list
+    results_dict,
+    names_list,
+    training_names_list,
+    test_name,
+    certainty_threshold,
+    n_iter
 ):
-    None
+    #certain?
+    for name in names_list:
+        results_dict[name]['certain'] = False
+        results_dict[name].loc[
+            (abs(results_dict[name]['Normal'] - results_dict[name]['Tumor']) > certainty_threshold),
+            'certain'
+            ] = True
+
+    # first training, pre label propagation
+    # Tumor vs Normal classification
+    X_features = ['Normal', 'Tumor', 'Epithelial']
+    X_dict = {}
+    y_dict = {}
+    Model = LogisticRegression()
+    for name in names_list:
+        X_dict[name] = results_dict[name].loc[:, X_features]
+        y_dict[name] = results_dict[name].loc[:, 'tier_0']
+    
+    y_train = pd.concat(
+        [y_dict[name] for name in training_names_list], 
+        axis=0, ignore_index=True)
+    X_train = pd.concat(
+        [X_dict[name] for name in training_names_list], 
+        axis=0, ignore_index=True)
+    X_test = X_dict[test_name]
+    
+    _ = Model.fit(X_train, y_train)
+    y_pred_lr = Model.predict(X_test)
+    y_pred_proba_lr = Model.predict_proba(X_test)
+
+    results_dict[test_name]['LR_proba_Normal'] = y_pred_proba_lr[:, 0]
+    results_dict[test_name]['LR_proba_Tumor'] = y_pred_proba_lr[:, 1]
+    results_dict[test_name]['tier_0_prediction_LR'] = y_pred_lr
+
+    proba_tier_0 = results_dict[test_name].loc[:, ['LR_proba_Normal', 'LR_proba_Tumor']].copy()
+    proba_tier_0.columns = ['Normal', 'Tumor']
+    proba_tier_0.loc[results_dict[test_name]['certain'] == False] = 0
+
+    for _ in range(n_iter):
+        proba_tier_0 = proba_tier_0.apply(lambda x: np.dot(x, connectivities_dict[test_name]), axis=0, raw=True)
+
+    # get prediction and arrange output file
+    results_dict[test_name]['tier_0_prediction_LR_with_label_propagation'] = results_dict[test_name]['tier_0_prediction_LR'].copy()
+    results_dict[test_name]['tier_0_prediction_LR_with_label_propagation'] = proba_tier_0.idxmax(axis=1)
+
+    results_dict[test_name]['Normal_lr_proba_ns'] = proba_tier_0['Normal']
+    results_dict[test_name]['Tumor_lr_proba_ns'] = proba_tier_0['Tumor']
+
+    lr_proba_smoothed = results_dict[test_name].loc[:, ['Normal_lr_proba_ns', 'Tumor_lr_proba_ns']]
+    lr_proba_smoothed = lr_proba_smoothed.divide(lr_proba_smoothed.sum(axis=1), axis=0)
+
+    results_dict[test_name] = results_dict[test_name].loc[:, ['raw', 'tier_0', 'Normal', 'Tumor', 'Epithelial', 'tier_0_prediction_LR', 'LR_proba_Normal', 'LR_proba_Tumor', 'tier_0_prediction_LR_with_label_propagation']]
+    results_dict[test_name].columns = ['raw', 'tier_0', 'Singscore_Normal', 'Singscore_Tumor', 'Singscore_Epithelial', 'tier_0_prediction_LR', 'LR_proba_Normal', 'LR_proba_Tumor', 'tier_0_prediction_LR_with_label_propagation']
+    results_dict[test_name]['LR_with_label_propagation_proba_Normal'] = lr_proba_smoothed.iloc[:, 0]
+    results_dict[test_name]['LR_with_label_propagation_proba_Tumor'] = lr_proba_smoothed.iloc[:, 1]
+    
+    results_dict[test_name].to_csv(f"/out/{test_name}/results_final.csv")
+
+
 
 def load_scores(
     name,
     adata
 ):
-    None
+    if "tier_0_hallmark_corrected" in adata.obs.columns:
+        adata.obs["tier_0_raw"] = adata.obs["tier_0"]
+        adata.obs["tier_0"] = adata.obs["tier_0_hallmark_corrected"]
+
+    scores = pd.DataFrame()
+    fnames = [
+        f"/out/{name}/Normal",
+        f"/out/{name}/Tumor",
+        f"/out/{name}/Epithelial",
+    ]
+    for fname in fnames:
+        s = pd.read_csv(f"{fname}_scaled_score.csv", index_col=False)
+        s.drop(["cells"], axis=1, inplace=True)
+        scores = pd.concat([scores, s], axis=1)
+
+    result_df = pd.concat(
+        [adata.obs.reset_index(drop=True), scores], 
+        axis=1
+    )
+    tier_0 = result_df[["Normal", "Tumor"]]
+    result_df["tier_0_pred"] = tier_0.idxmax(axis=1)
+
+    return result_df
+
 
 def calculate_connectivities(
     adata,
-    usage
+    n_neighbors,
+    use_highly_variable
 ):
-    None
-    # for usage in usages:
-    #     if usage = 'test':
+    sc.pp.highly_variable_genes(adata)
+    sc.tl.pca(adata, use_highly_variable=use_highly_variable)
+    sc.pp.neighbors(adata, n_neighbors=n_neighbors, method='umap')
+    connectivities= adata.uns['neighbors']['connectivities'].todense()
+    return connectivities
+
 
 def load_connectivities(
-    name,
-    usage
+    name
 ):
-    None
-    # for usage in usages:
-    #     if usage = 'test':
+    connectivities = scipy.sparse.load_npz(
+        f'/out/{name}/connectivities_sparse.npz'
+        ).todense()
+    return connectivities
