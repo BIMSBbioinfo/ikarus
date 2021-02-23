@@ -1,6 +1,6 @@
 # decide which subtasks to run
 run:
-    gene_selector: True
+    gene_selector: False
     cell_scorer: True
     cell_annotator: True
     

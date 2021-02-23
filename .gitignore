@@ -2,5 +2,5 @@ __pychache__/
 *.egg-info/
 *.egg
 
-out/*
+out/*/
 
