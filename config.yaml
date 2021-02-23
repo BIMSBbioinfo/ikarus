@@ -144,7 +144,7 @@ cell_annotator:
         - 'lambrechts'
     
     # Provide information: either 'training' or 'test'
-    usage:
+    usages:
         - 'training'
         - 'training'
         - 'test'

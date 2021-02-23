@@ -140,8 +140,24 @@ if config['run']['cell_scorer']:
 if config['run']['cell_annotator']:
     paths = config['cell_annotator']['paths']
     names = config['cell_annotator']['names']
-    usage = config['cell_annotator']['usage']
+    usages = config['cell_annotator']['usages']
 
     scores = {}
     adatas = {}
     connectivities = {}
+
+    for name, path, usage in zip(names, paths, usages):
+        # adata
+        adatas[name] = load_adata(path, adata_is_given=True)
+        
+        # connectivities
+        if usage == 'test':
+            if config['cell_annotator']['connectivities_given']:
+                connectivities[name] = load_connectivities(name, usage)
+            else:
+                connectivities[name] = calculate_connectivities(adatas[name], usage)
+        else:
+            connectivities[name] = None
+
+        # scores
+        scores[name] = load_scores(name, adata)

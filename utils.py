@@ -166,15 +166,23 @@ def label_propagation(
     None
 
 def load_scores(
-    adatas_dict
+    name,
+    adata
 ):
     None
 
 def calculate_connectivities(
-    adatas_dict
+    adata,
+    usage
 ):
     None
+    # for usage in usages:
+    #     if usage = 'test':
 
 def load_connectivities(
-    names_list
-)
+    name,
+    usage
+):
+    None
+    # for usage in usages:
+    #     if usage = 'test':
