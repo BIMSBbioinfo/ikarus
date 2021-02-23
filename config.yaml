@@ -100,12 +100,14 @@ cell_scorer:
     gene_lists:
         - 'out/Normal_refined_gene_list.csv'
         - 'out/Tumor_refined_gene_list.csv'
+        - 'out/Epithelial_refined_gene_list.csv'
     
     # If solely cell_scorer is run, upregulated label names must be given
     # corresponding to the order of gene lists. Else, this is neglected.
     label_upregs:
         - 'Normal'
         - 'Tumor'
+        - 'Epithelial'
 
 # paths to the directory of the given input data sets
 # directory must contain cell_labels.csv, genes_symbol.csv and matrix_sparse.npz

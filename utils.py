@@ -250,7 +250,7 @@ def cell_annotator(
         'LR_with_label_propagation_proba_Tumor'
         ] = lr_proba_smoothed.iloc[:, 1]
     
-    results_dict[test_name].to_csv(f"/out/{test_name}/results_final.csv")
+    results_dict[test_name].to_csv(f"out/{test_name}/results_final.csv")
 
 
 
@@ -264,9 +264,9 @@ def load_scores(
 
     scores = pd.DataFrame()
     fnames = [
-        f"/out/{name}/Normal",
-        f"/out/{name}/Tumor",
-        f"/out/{name}/Epithelial",
+        f"out/{name}/Normal",
+        f"out/{name}/Tumor",
+        f"out/{name}/Epithelial",
     ]
     for fname in fnames:
         s = pd.read_csv(f"{fname}_scaled_score.csv", index_col=False)
