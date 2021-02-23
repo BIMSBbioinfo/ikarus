@@ -107,10 +107,10 @@ cell_scorer:
 # path to the directory of the given input data set
 # directory must contain cell_labels.csv, genes_symbol.csv and matrix_sparse.npz
 # shapes of those files as given in the example (need better description!!)
-    path: '/data/local/jdohmen/ikarus/data/sc_cancer/yeung13_ovarian/'
+    path: '/data/local/jdohmen/ikarus/data/sc_cancer/tirosh17_headneck/'
 
 # name of the given input data set
-    name: 'yeung'
+    name: 'tirosh'
 
 # directly load adata.h5ad instead
     adata_is_given: True
@@ -135,13 +135,13 @@ cell_annotator:
     paths:
         - '/data/local/jdohmen/ikarus/data/sc_cancer/laughney20_lung/'
         - '/data/local/jdohmen/ikarus/data/sc_cancer/lee20_crc/'
-        - '/data/local/jdohmen/ikarus/data/sc_cancer/lambrechts18_lung/'
+        - '/data/local/jdohmen/ikarus/data/sc_cancer/tirosh17_headneck/'
 
     # Names of the datasets
     names:
         - 'laughney'
         - 'lee'
-        - 'lambrechts'
+        - 'tirosh'
     
     # Assign datasets to either training or test set
     # currently just one test set allowed
@@ -150,7 +150,7 @@ cell_annotator:
         - 'laughney'
         - 'lee'
     
-    test_name: 'lambrechts'
+    test_name: 'tirosh'
 
     # connectivities already given, else this will be calculated
     connectivities_given: False
@@ -161,7 +161,7 @@ cell_annotator:
     # threshold for the absolute difference of singscores for which the 
     # prediction can be considered certain
     # these are then used as root for label propagation
-    certainty_threshold: 0.3
+    certainty_threshold: 0.2
 
     # number of iterations for label propagation
     n_iter: 15

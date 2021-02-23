@@ -199,22 +199,56 @@ def cell_annotator(
     proba_tier_0.loc[results_dict[test_name]['certain'] == False] = 0
 
     for _ in range(n_iter):
-        proba_tier_0 = proba_tier_0.apply(lambda x: np.dot(x, connectivities_dict[test_name]), axis=0, raw=True)
+        proba_tier_0 = proba_tier_0.apply(
+            lambda x: np.dot(x, connectivities_dict[test_name]
+            ), axis=0, raw=True)
 
     # get prediction and arrange output file
-    results_dict[test_name]['tier_0_prediction_LR_with_label_propagation'] = results_dict[test_name]['tier_0_prediction_LR'].copy()
-    results_dict[test_name]['tier_0_prediction_LR_with_label_propagation'] = proba_tier_0.idxmax(axis=1)
+    # q&d: find better solution to this mess
+    results_dict[test_name][
+        'tier_0_prediction_LR_with_label_propagation'
+        ] = results_dict[test_name]['tier_0_prediction_LR'].copy()
+    results_dict[test_name][
+        'tier_0_prediction_LR_with_label_propagation'
+        ] = proba_tier_0.idxmax(axis=1)
 
     results_dict[test_name]['Normal_lr_proba_ns'] = proba_tier_0['Normal']
     results_dict[test_name]['Tumor_lr_proba_ns'] = proba_tier_0['Tumor']
 
-    lr_proba_smoothed = results_dict[test_name].loc[:, ['Normal_lr_proba_ns', 'Tumor_lr_proba_ns']]
+    lr_proba_smoothed = results_dict[test_name].loc[:, [
+        'Normal_lr_proba_ns', 
+        'Tumor_lr_proba_ns'
+        ]]
     lr_proba_smoothed = lr_proba_smoothed.divide(lr_proba_smoothed.sum(axis=1), axis=0)
-
-    results_dict[test_name] = results_dict[test_name].loc[:, ['raw', 'tier_0', 'Normal', 'Tumor', 'Epithelial', 'tier_0_prediction_LR', 'LR_proba_Normal', 'LR_proba_Tumor', 'tier_0_prediction_LR_with_label_propagation']]
-    results_dict[test_name].columns = ['raw', 'tier_0', 'Singscore_Normal', 'Singscore_Tumor', 'Singscore_Epithelial', 'tier_0_prediction_LR', 'LR_proba_Normal', 'LR_proba_Tumor', 'tier_0_prediction_LR_with_label_propagation']
-    results_dict[test_name]['LR_with_label_propagation_proba_Normal'] = lr_proba_smoothed.iloc[:, 0]
-    results_dict[test_name]['LR_with_label_propagation_proba_Tumor'] = lr_proba_smoothed.iloc[:, 1]
+    
+    results_dict[test_name] = results_dict[test_name].loc[:, [
+        'raw', 
+        'tier_0', 
+        'Normal', 
+        'Tumor', 
+        'Epithelial', 
+        'tier_0_prediction_LR', 
+        'LR_proba_Normal', 
+        'LR_proba_Tumor', 
+        'tier_0_prediction_LR_with_label_propagation'
+        ]]
+    results_dict[test_name].columns = [
+        'raw', 
+        'tier_0', 
+        'Singscore_Normal', 
+        'Singscore_Tumor', 
+        'Singscore_Epithelial', 
+        'tier_0_prediction_LR', 
+        'LR_proba_Normal', 
+        'LR_proba_Tumor', 
+        'tier_0_prediction_LR_with_label_propagation'
+        ]
+    results_dict[test_name][
+        'LR_with_label_propagation_proba_Normal'
+        ] = lr_proba_smoothed.iloc[:, 0]
+    results_dict[test_name][
+        'LR_with_label_propagation_proba_Tumor'
+        ] = lr_proba_smoothed.iloc[:, 1]
     
     results_dict[test_name].to_csv(f"/out/{test_name}/results_final.csv")
 
