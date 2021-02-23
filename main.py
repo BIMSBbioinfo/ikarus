@@ -106,10 +106,13 @@ if config['run']['gene_selector']:
 if config['run']['cell_scorer']:
     paths = config['cell_scorer']['paths']
     names = config['cell_scorer']['names']
-    for path, name in zip(paths, names):
+    obs_names = config['cell_scorer']['obs_names']
+    for path, name, obs_name in zip(paths, names, obs_names):
         adata = load_adata(
             path,
-            config['cell_scorer']['adata_is_given']
+            config['cell_scorer']['adata_is_given'],
+            config['cell_scorer']['sparse_is_given']
+
         )
         adata = (
             adata if config['cell_scorer']['is_preprocessed'] else preprocess_adata(adata)
@@ -144,13 +147,15 @@ if config['run']['cell_scorer']:
             name,
             gene_list_dict,
             singscore_fun,
-            config['cell_scorer']['obs_name'])
+            obs_name
+            )
 
 
 # cell annotation
 if config['run']['cell_annotator']:
     paths = config['cell_annotator']['paths']
     names = config['cell_annotator']['names']
+    obs_names = config['cell_annotator']['obs_names']
     test_name = config['cell_annotator']['test_name']
     training_names = config['cell_annotator']['training_names']
 
@@ -163,7 +168,7 @@ if config['run']['cell_annotator']:
         adatas[name] = load_adata(path, adata_is_given=True)
 
         # scores
-        results[name] = load_scores(name, adata)
+        results[name] = load_scores(name, adatas[name])
         
     # connectivities
     if config['cell_annotator']['connectivities_given']:
@@ -177,10 +182,10 @@ if config['run']['cell_annotator']:
 
     # label propagation
     cell_annotator(
-        adatas, 
         connectivities, 
         results,
         names,
+        obs_names,
         training_names,
         test_name,
         config['cell_annotator']['certainty_threshold'],

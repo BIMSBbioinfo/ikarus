@@ -27,6 +27,11 @@ gene_selector:
         - True
         - True
 
+# build adata from sparse matrix (matrix_sparse.npz)
+    sparse_is_given: 
+        - False
+        - False
+
 # if False make data preprocessing
     is_preprocessed:
         - True
@@ -126,6 +131,9 @@ cell_scorer:
 # directly load adata.h5ad instead
     adata_is_given: True
 
+# build adata from sparse matrix (matrix_sparse.npz)
+    sparse_is_given: False
+
 # if False make data preprocessing
     is_preprocessed: True
 
@@ -133,9 +141,12 @@ cell_scorer:
 # null, if using all cells
     n_cells: null
 
-# string column name of adata.obs
+# string column name of adata.obs for each dataset
 # this column contains the cells that should get annotated
-    obs_name: 'tier_0'
+    obs_names:
+        - 'tier_0'
+        - 'tier_0'
+        - 'tier_0'
 
 
 # configurations for cell annotator
@@ -153,6 +164,13 @@ cell_annotator:
         - 'laughney'
         - 'lee'
         - 'tirosh'
+
+    # column name of adata.obs for each dataset
+    # this column contains the cells that should get annotated
+    obs_names:
+        - 'tier_0'
+        - 'tier_0'
+        - 'tier_0'
     
     # Assign datasets to either training or test set
     # currently just one test set allowed

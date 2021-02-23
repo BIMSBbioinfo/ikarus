@@ -13,15 +13,22 @@ def preprocess_adata(adata):
     return adata
 
 
-def load_adata(path, adata_is_given=False):
+def load_adata(path, adata_is_given=False, sparse_is_given=False):
     if adata_is_given:
         adata = read_h5ad(f'{path}adata.h5ad')
-    else:
+    elif sparse_is_given:
         cl = pd.read_csv(f'{path}cell_labels.csv')
         genes = pd.read_csv(f'{path}genes_symbol.csv', header=None, names=['gene_symbol'])
         genes.index = genes['gene_symbol'].values
         sparse = scipy.sparse.load_npz(f'{path}matrix_sparse.npz')
         adata = AnnData(sparse, var=genes, obs=cl)
+    else:
+        cl = pd.read_csv(f'{path}cell_labels.csv')
+        genes = pd.read_csv(f'{path}genes_symbol.csv', header=None, names=['gene_symbol'])
+        genes.index = genes['gene_symbol'].values
+        dense = pd.read_csv(f'{path}counts.csv', index_col=0)
+        adata = AnnData(dense.reset_index(drop=True), obs=cl.reset_index(drop=True))
+        adata.var = genes
     adata.var_names_make_unique()
     return adata
 
@@ -155,6 +162,7 @@ def cell_annotator(
     connectivities_dict,
     results_dict,
     names_list,
+    obs_names_list,
     training_names_list,
     test_name,
     certainty_threshold,
@@ -174,9 +182,9 @@ def cell_annotator(
     X_dict = {}
     y_dict = {}
     Model = LogisticRegression()
-    for name in names_list:
+    for name, obs_name in zip(names_list, obs_names_list):
         X_dict[name] = results_dict[name].loc[:, X_features]
-        y_dict[name] = results_dict[name].loc[:, 'tier_0']
+        y_dict[name] = results_dict[name].loc[:, obs_name]
     
     y_train = pd.concat(
         [y_dict[name] for name in training_names_list], 
@@ -221,28 +229,6 @@ def cell_annotator(
         ]]
     lr_proba_smoothed = lr_proba_smoothed.divide(lr_proba_smoothed.sum(axis=1), axis=0)
     
-    results_dict[test_name] = results_dict[test_name].loc[:, [
-        'raw', 
-        'tier_0', 
-        'Normal', 
-        'Tumor', 
-        'Epithelial', 
-        'tier_0_prediction_LR', 
-        'LR_proba_Normal', 
-        'LR_proba_Tumor', 
-        'tier_0_prediction_LR_with_label_propagation'
-        ]]
-    results_dict[test_name].columns = [
-        'raw', 
-        'tier_0', 
-        'Singscore_Normal', 
-        'Singscore_Tumor', 
-        'Singscore_Epithelial', 
-        'tier_0_prediction_LR', 
-        'LR_proba_Normal', 
-        'LR_proba_Tumor', 
-        'tier_0_prediction_LR_with_label_propagation'
-        ]
     results_dict[test_name][
         'LR_with_label_propagation_proba_Normal'
         ] = lr_proba_smoothed.iloc[:, 0]
