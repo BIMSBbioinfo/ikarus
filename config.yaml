@@ -1,7 +1,6 @@
 # decide which subtasks to run
 run:
     gene_selector: True
-    gene_list_integrator: True
     cell_scorer: True
     cell_annotator: True
     
@@ -38,12 +37,16 @@ gene_selector:
     obs_name: 'tier_0_hallmark_corrected'
 
 # String name of the cell type which should be considered as up-regulated
-    label_upreg: 'Normal'
+    label_upregs: 
+        - 'Normal'
+        - 'Tumor'
 
 # String name of the cell type which should be considered as down-regulated
 # label_upreg is compared to label_downreg
 # if null, label_upreg is compared to everything else in obs_name
-    label_downreg: null
+    label_downregs: 
+        - null
+        - null
 
 # genes are excluded if logfoldchanges < lfc_threshold
     lfc_threshold: 1
@@ -104,13 +107,19 @@ cell_scorer:
         - 'Normal'
         - 'Tumor'
 
-# path to the directory of the given input data set
+# paths to the directory of the given input data sets
 # directory must contain cell_labels.csv, genes_symbol.csv and matrix_sparse.npz
 # shapes of those files as given in the example (need better description!!)
-    path: '/data/local/jdohmen/ikarus/data/sc_cancer/tirosh17_headneck/'
+    paths:
+        - '/data/local/jdohmen/ikarus/data/sc_cancer/laughney20_lung/'
+        - '/data/local/jdohmen/ikarus/data/sc_cancer/lee20_crc/'
+        - '/data/local/jdohmen/ikarus/data/sc_cancer/tirosh17_headneck/'
 
-# name of the given input data set
-    name: 'tirosh'
+# names of the given input data set
+    names:
+        - 'laughney'
+        - 'lee'
+        - 'tirosh'
 
 # directly load adata.h5ad instead
     adata_is_given: True
