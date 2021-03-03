@@ -23,10 +23,12 @@ def load_adata(path, adata_is_given=False, sparse_is_given=False):
         sparse = scipy.sparse.load_npz(f'{path}matrix_sparse.npz')
         adata = AnnData(sparse, var=genes, obs=cl)
     else:
-        cl = pd.read_csv(f'{path}cell_labels.csv')
+        # cl = pd.read_csv(f'{path}cell_labels.csv')
+        cl = pd.read_csv(f'{path}cell_labels.csv', names=['raw', 'tier_0', 'meta_0', 'meta_1', 'meta_2'])
         genes = pd.read_csv(f'{path}genes_symbol.csv', header=None, names=['gene_symbol'])
         genes.index = genes['gene_symbol'].values
-        dense = pd.read_csv(f'{path}counts.csv', index_col=0)
+        # dense = pd.read_csv(f'{path}counts.csv', index_col=0)
+        dense = pd.read_csv(f'{path}counts_proc.csv', index_col=0)
         adata = AnnData(dense.reset_index(drop=True), obs=cl.reset_index(drop=True))
         adata.var = genes
     adata.var_names_make_unique()
