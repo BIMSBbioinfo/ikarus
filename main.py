@@ -30,13 +30,14 @@ with open(args.config_fname) as f:
 # gene selection
 if config['run']['gene_selector']:
     adatas = {}
-    for p, n, a, preproc in zip(
+    for p, n, a, s, preproc in zip(
         config['gene_selector']['paths'],
         config['gene_selector']['names'],
         config['gene_selector']['adata_is_given'],
+        config['gene_selector']['sparse_is_given'],
         config['gene_selector']['is_preprocessed']
     ):
-        adata = load_adata(p, a)
+        adata = load_adata(p, a, s)
         adatas[n] = adata if preproc else preprocess_adata(adata)
         if not a and not preproc:
             adatas[n].write(p + 'adata.h5ad')
