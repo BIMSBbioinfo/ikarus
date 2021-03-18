@@ -200,10 +200,10 @@ cell_annotator:
     # threshold for the absolute difference of singscores for which the 
     # prediction can be considered certain
     # these are then used as root for label propagation
-    certainty_threshold: 0.9
+    certainty_threshold: 0.7
 
     # number of iterations for label propagation
-    n_iter: 15
+    n_iter: 5
 
     # decide if umap should be calculated
     calc_umap: True
