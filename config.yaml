@@ -1,8 +1,8 @@
 # decide which subtasks to run
 run:
-    gene_selector: False
-    cell_scorer: True
-    cell_annotator: True
+    gene_selector: True
+    cell_scorer: False
+    cell_annotator: False
     
     
 
@@ -24,26 +24,31 @@ gene_selector:
 
 # directly load adata.h5ad instead
     adata_is_given:
-        - True
-        - True
+        - False
+        - False
 
 # build adata from sparse matrix (matrix_sparse.npz)
     sparse_is_given: 
-        - False
-        - False
+        - True
+        - True
 
 # if False make data preprocessing
     is_preprocessed:
-        - True
-        - True
+        - False
+        - False
 
 # string column name of adata.obs
 # this column contains the relevant cell labels
-    obs_name: 'tier_0_hallmark_corrected'
+    obs_name: 'major'
 
 # String name of the cell type which should be considered as up-regulated
     label_upregs: 
-        - 'Normal'
+        - 'Tumor'
+        - 'Tumor'
+        - 'Tumor'
+        - 'Tumor'
+        - 'Tumor'
+        - 'Tumor'
         - 'Tumor'
 
 # String name of the cell type which should be considered as down-regulated
@@ -51,7 +56,12 @@ gene_selector:
 # if null, label_upreg is compared to everything else in obs_name
     label_downregs: 
         - null
-        - null
+        - 'Immune'
+        - 'Epithelial'
+        - 'Fibroblast'
+        - 'Pericyte'
+        - 'Other'
+        - 'Endothelial'
 
 # genes are excluded if logfoldchanges < lfc_threshold
     lfc_threshold: 1
@@ -190,7 +200,13 @@ cell_annotator:
     # threshold for the absolute difference of singscores for which the 
     # prediction can be considered certain
     # these are then used as root for label propagation
-    certainty_threshold: 0.2
+    certainty_threshold: 0.9
 
     # number of iterations for label propagation
     n_iter: 15
+
+    # decide if umap should be calculated
+    calc_umap: True
+
+    # set a string prefix for saving files
+    save_prefix = ''

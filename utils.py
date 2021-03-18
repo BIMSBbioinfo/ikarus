@@ -1,9 +1,11 @@
+import glob
 import scipy
 import numpy as np
 import pandas as pd
 import scanpy as sc
 from anndata import AnnData, read_h5ad
 from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
 from PySingscore.singscore import singscore
 
 
@@ -165,23 +167,17 @@ def cell_annotator(
     obs_names_list,
     training_names_list,
     test_name,
+    input_features,
     certainty_threshold,
     n_iter
 ):
-    #certain?
-    for name in names_list:
-        results_dict[name]['certain'] = False
-        results_dict[name].loc[
-            (abs(results_dict[name]['Normal'] - results_dict[name]['Tumor']) > certainty_threshold),
-            'certain'
-            ] = True
-
     # first training, pre label propagation
     # Tumor vs Normal classification
-    X_features = ['Normal', 'Tumor', 'Epithelial']
+    X_features = input_features
     X_dict = {}
     y_dict = {}
     Model = LogisticRegression()
+    # Model = RandomForestClassifier()
     for name, obs_name in zip(names_list, obs_names_list):
         X_dict[name] = results_dict[name].loc[:, X_features]
         y_dict[name] = results_dict[name].loc[:, obs_name]
@@ -200,44 +196,59 @@ def cell_annotator(
 
     results_dict[test_name]['LR_proba_Normal'] = y_pred_proba_lr[:, 0]
     results_dict[test_name]['LR_proba_Tumor'] = y_pred_proba_lr[:, 1]
-    results_dict[test_name]['tier_0_prediction_LR'] = y_pred_lr
+    results_dict[test_name]['LR_tier_0_prediction'] = y_pred_lr
 
-    proba_tier_0 = results_dict[test_name].loc[:, ['LR_proba_Normal', 'LR_proba_Tumor']].copy()
+    results_dict[test_name] = label_propagation(
+        results_dict[test_name], 
+        connectivities_dict[test_name],
+        n_iter, 
+        certainty_threshold
+        )
+
+    return results_dict[test_name]
+
+
+def label_propagation(results, connectivities, n_iter, certainty_threshold):
+    proba_tier_0 = results.loc[
+        :, ['LR_proba_Normal', 'LR_proba_Tumor']
+        ].copy()
     proba_tier_0.columns = ['Normal', 'Tumor']
-    proba_tier_0.loc[results_dict[test_name]['certain'] == False] = 0
 
-    for _ in range(n_iter):
+    #certain?
+    absdif = abs(results['Normal'] - results['Tumor'])
+    results['certain'] = False
+    results.loc[
+        absdif > absdif.quantile(q=certainty_threshold),
+        'certain'
+        ] = True
+    # proba_tier_0.loc[results['certain'] == False] = 0
+
+    for i in range(n_iter):
+        results[f'certain{i}'] = False
+        results.loc[
+            absdif > absdif.quantile(q=certainty_threshold * np.linspace(1,0,n_iter)[i]),
+            f'certain{i}'
+            ] = True 
+        proba_tier_0.loc[results[f'certain{i}'] == False] = 0
+                 
         proba_tier_0 = proba_tier_0.apply(
-            lambda x: np.dot(x, connectivities_dict[test_name]
-            ), axis=0, raw=True)
+            lambda x: np.dot(x, connectivities), axis=0, raw=True
+        )
+    proba_tier_0 = proba_tier_0.divide(proba_tier_0.sum(axis=1), axis=0)
 
     # get prediction and arrange output file
-    # q&d: find better solution to this mess
-    results_dict[test_name][
-        'tier_0_prediction_LR_with_label_propagation'
-        ] = results_dict[test_name]['tier_0_prediction_LR'].copy()
-    results_dict[test_name][
-        'tier_0_prediction_LR_with_label_propagation'
+    results[
+        'LR_with_label_propagation_tier_0_prediction'
         ] = proba_tier_0.idxmax(axis=1)
-
-    results_dict[test_name]['Normal_lr_proba_ns'] = proba_tier_0['Normal']
-    results_dict[test_name]['Tumor_lr_proba_ns'] = proba_tier_0['Tumor']
-
-    lr_proba_smoothed = results_dict[test_name].loc[:, [
-        'Normal_lr_proba_ns', 
-        'Tumor_lr_proba_ns'
-        ]]
-    lr_proba_smoothed = lr_proba_smoothed.divide(lr_proba_smoothed.sum(axis=1), axis=0)
     
-    results_dict[test_name][
+    results[
         'LR_with_label_propagation_proba_Normal'
-        ] = lr_proba_smoothed.iloc[:, 0]
-    results_dict[test_name][
+        ] = proba_tier_0['Normal']
+    results[
         'LR_with_label_propagation_proba_Tumor'
-        ] = lr_proba_smoothed.iloc[:, 1]
+        ] = proba_tier_0['Tumor']
     
-    results_dict[test_name].to_csv(f"out/{test_name}/results_final.csv")
-
+    return results
 
 
 def load_scores(
@@ -249,13 +260,9 @@ def load_scores(
         adata.obs["tier_0"] = adata.obs["tier_0_hallmark_corrected"]
 
     scores = pd.DataFrame()
-    fnames = [
-        f"out/{name}/Normal",
-        f"out/{name}/Tumor",
-        f"out/{name}/Epithelial",
-    ]
+    fnames = glob.glob(f"out/{name}/*scaled_score.csv")
     for fname in fnames:
-        s = pd.read_csv(f"{fname}_scaled_score.csv", index_col=False)
+        s = pd.read_csv(fname, index_col=False)
         s.drop(["cells"], axis=1, inplace=True)
         scores = pd.concat([scores, s], axis=1)
 
@@ -263,8 +270,6 @@ def load_scores(
         [adata.obs.reset_index(drop=True), scores], 
         axis=1
     )
-    tier_0 = result_df[["Normal", "Tumor"]]
-    result_df["tier_0_pred"] = tier_0.idxmax(axis=1)
 
     return result_df
 
@@ -277,7 +282,7 @@ def calculate_connectivities(
     sc.pp.highly_variable_genes(adata)
     sc.tl.pca(adata, use_highly_variable=use_highly_variable)
     sc.pp.neighbors(adata, n_neighbors=n_neighbors, method='umap')
-    connectivities= adata.uns['neighbors']['connectivities'].todense()
+    connectivities = adata.obsp['connectivities'].todense()
     return connectivities
 
 
@@ -285,6 +290,6 @@ def load_connectivities(
     name
 ):
     connectivities = scipy.sparse.load_npz(
-        f'/out/{name}/connectivities_sparse.npz'
+        f'out/{name}/connectivities_sparse.npz'
         ).todense()
     return connectivities

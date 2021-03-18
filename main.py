@@ -154,6 +154,7 @@ if config['run']['cell_scorer']:
 
 # cell annotation
 if config['run']['cell_annotator']:
+    save_prefix = config['cell_annotator']['save_prefix']
     paths = config['cell_annotator']['paths']
     names = config['cell_annotator']['names']
     obs_names = config['cell_annotator']['obs_names']
@@ -180,15 +181,36 @@ if config['run']['cell_annotator']:
             n_neighbors=100,
             use_highly_variable=False
             )
+        sparse = scipy.sparse.csr_matrix(connectivities[test_name])
+        scipy.sparse.save_npz(f'/out/{test_name}/connectivities_sparse.npz', sparse)
 
-    # label propagation
-    cell_annotator(
+    input_features = [
+        'Tumor',
+        'Normal'
+    ]
+    # pre-prediction & label propagation
+    results[test_name] = cell_annotator(
         connectivities, 
         results,
         names,
         obs_names,
         training_names,
         test_name,
+        input_features,
         config['cell_annotator']['certainty_threshold'],
         config['cell_annotator']['n_iter']
         )
+
+    results[test_name].to_csv(f"out/{test_name}/results_final{save_prefix}.csv")
+
+    if config['cell_annotator']['calc_umap']:
+        np.random.seed(0)
+        adatas[test_name].obs['LR_with_label_propagation_tier_0_prediction'] = results[test_name]['LR_with_label_propagation_tier_0_prediction'].values
+        adatas[test_name].obs['LR_tier_0_prediction'] = results[test_name]['LR_tier_0_prediction'].values
+        adatas[test_name].obs['certain'] = results[test_name]['certain'].values
+
+        sc.tl.pca(adatas[test_name], random_state=0)
+        sc.pp.neighbors(adatas[test_name], n_neighbors=100, method='umap')
+
+        sc.tl.umap(adatas[test_name], random_state=0)
+        adatas[test_name].write_h5ad(f"out/{test_name}/adatas_umap{save_prefix}.h5ad")
