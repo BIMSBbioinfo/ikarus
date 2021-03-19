@@ -229,12 +229,12 @@ def label_propagation(results, connectivities, n_iter, certainty_threshold):
             absdif > absdif.quantile(q=certainty_threshold * np.linspace(1,0,n_iter)[i]),
             f'certain{i}'
             ] = True 
-        proba_tier_0.loc[results[f'certain{i}'] == False] = 0
+        proba_tier_0.loc[results[f'certain{i}'] == False] = 0.000001
                  
         proba_tier_0 = proba_tier_0.apply(
             lambda x: np.dot(x, connectivities), axis=0, raw=True
         )
-    proba_tier_0 = proba_tier_0.divide(proba_tier_0.sum(axis=1), axis=0)
+        proba_tier_0 = proba_tier_0.divide(proba_tier_0.sum(axis=1), axis=0)
 
     # get prediction and arrange output file
     results[
