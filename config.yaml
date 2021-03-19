@@ -209,4 +209,4 @@ cell_annotator:
     calc_umap: True
 
     # set a string prefix for saving files
-    save_prefix = ''
+    save_prefix: ''
