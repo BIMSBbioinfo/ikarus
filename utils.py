@@ -221,26 +221,32 @@ def label_propagation(results, connectivities, n_iter, certainty_threshold):
         absdif > absdif.quantile(q=certainty_threshold),
         'certain'
         ] = True
-    # proba_tier_0.loc[results['certain'] == False] = 0
 
     for i in range(n_iter):
+        certainty_threshold_pct = certainty_threshold * np.linspace(1, 0, n_iter)[i]
         results[f'certain{i}'] = False
         results.loc[
-            absdif > absdif.quantile(q=certainty_threshold * np.linspace(1,0,n_iter)[i]),
+            absdif > absdif.quantile(q=certainty_threshold_pct),
             f'certain{i}'
             ] = True 
         proba_tier_0.loc[results[f'certain{i}'] == False] = 0.000001
                  
-        proba_tier_0 = proba_tier_0.apply(
-            lambda x: np.dot(x, connectivities), axis=0, raw=True
-        )
-        proba_tier_0 = proba_tier_0.divide(proba_tier_0.sum(axis=1), axis=0)
+        lp_step_mtx = np.dot(connectivities, proba_tier_0.values)
+        lp_step_mtx = np.divide(lp_step_mtx, lp_step_mtx.sum(axis=1))
+        proba_tier_0.loc[:, :] = lp_step_mtx
+
+        current = proba_tier_0.idxmax(axis=1)
+        if not i < 5:
+            if ((current != pre).sum() / current.size) < 0.001:
+                break
+        if i == n_iter - 1:
+            print(f'Warning: Label propagation did not converge ({((current != pre).sum() / current.size):.4f} >= 0.001) within {n_iter} iterations!')
+        pre = current
 
     # get prediction and arrange output file
     results[
         'LR_with_label_propagation_tier_0_prediction'
         ] = proba_tier_0.idxmax(axis=1)
-    
     results[
         'LR_with_label_propagation_proba_Normal'
         ] = proba_tier_0['Normal']
