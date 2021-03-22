@@ -182,7 +182,7 @@ if config['run']['cell_annotator']:
             use_highly_variable=False
             )
         sparse = scipy.sparse.csr_matrix(connectivities[test_name])
-        scipy.sparse.save_npz(f'/out/{test_name}/connectivities_sparse.npz', sparse)
+        scipy.sparse.save_npz(f'out/{test_name}/connectivities_sparse.npz', sparse)
 
     input_features = [
         'Tumor',
