@@ -132,8 +132,11 @@ def cell_scorer(
         scores = scoring_fun(gene_list, df)
         scores = scores['total_score'].values
         all_scores[label_upreg] = scores
-        all_scaled_scores[label_upreg] = ((scores - scores.min())
-                                          / (scores.max() - scores.min()))
+#        all_scaled_scores[label_upreg] = ((scores - scores.min())
+#                                          / (scores.max() - scores.min()))
+        # try to z-normalization instead of min-max scaling
+        all_scaled_scores[label_upreg] = ((scores - scores.mean()) / scores.std())
+    
         all_scores.to_csv(
             f'out/{name}/{label_upreg}_score.csv',
             index_label='cells'
