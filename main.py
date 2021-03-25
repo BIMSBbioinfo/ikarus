@@ -1,4 +1,5 @@
 import yaml
+import glob
 import argparse
 from pathlib import Path
 import pandas as pd
@@ -176,8 +177,16 @@ if config['run']['cell_annotator']:
     if config['cell_annotator']['connectivities_given']:
         connectivities[test_name] = load_connectivities(test_name)
     else:
+        gl_fnames = glob.glob(f'out/*_gene_list.csv')
+        genes = pd.concat(
+            [pd.read_csv(gl_fname, header=None) for gl_fname in gl_fnames],
+            ignore_index=True
+        )
+        genes = genes[0].unique().tolist()
+        genes_in_var = list(set(genes) & set(adatas[test_name].var['gene_symbol'].values.tolist()))
+        
         connectivities[test_name] = calculate_connectivities(
-            adatas[test_name], 
+            adatas[test_name][:, genes_in_var], 
             n_neighbors=100,
             use_highly_variable=False
             )
