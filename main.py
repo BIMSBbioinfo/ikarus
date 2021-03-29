@@ -106,15 +106,29 @@ if config['run']['gene_selector']:
 
 # cell scoring
 if config['run']['cell_scorer']:
+    if config['run']['gene_selector']:
+        gene_list_dict = {}
+        for label_upreg, label_downreg in zip(config['gene_selector']['label_upregs'], config['gene_selector']['label_downregs']):
+            if label_downreg == None:
+                write_label_downreg = 'all'
+            else:
+                write_label_downreg = label_downreg
+            gene_list_dict[label_upreg] = pd.read_csv(f"out/{label_upreg}_vs_{write_label_downreg}_gene_list.csv", header=None).values.ravel().tolist()
+    else:
+        gene_lists = [
+            pd.read_csv(gl, header=None).values.ravel().tolist() for gl in config['cell_scorer']['gene_lists']
+        ]
+        label_upregs = config['cell_scorer']['label_upregs']
+        gene_list_dict = dict(zip(label_upregs, gene_lists))
+    create_gmt(gene_list_dict)
+
     paths = config['cell_scorer']['paths']
     names = config['cell_scorer']['names']
-    obs_names = config['cell_scorer']['obs_names']
-    for path, name, obs_name in zip(paths, names, obs_names):
+    for path, name in zip(paths, names):
         adata = load_adata(
             path,
             config['cell_scorer']['adata_is_given'],
             config['cell_scorer']['sparse_is_given']
-
         )
         adata = (
             adata if config['cell_scorer']['is_preprocessed'] else preprocess_adata(adata)
@@ -127,30 +141,8 @@ if config['run']['cell_scorer']:
             adata[:config['cell_scorer']['n_cells']]
         )
 
-        if config['run']['gene_selector']:
-            gene_list_dict = {}
-            for label_upreg, label_downreg in zip(config['gene_selector']['label_upregs'], config['gene_selector']['label_downregs']):
-                if label_downreg == None:
-                    write_label_downreg = 'all'
-                else:
-                    write_label_downreg = label_downreg
-                gene_list_dict[label_upreg] = pd.read_csv(f"out/{label_upreg}_vs_{write_label_downreg}_gene_list.csv", header=None).values.ravel().tolist()
-
-        else:
-            gene_lists = [
-                pd.read_csv(gl, header=None).values.ravel().tolist() for gl in config['cell_scorer']['gene_lists']
-            ]
-            label_upregs = config['cell_scorer']['label_upregs']
-            gene_list_dict = dict(zip(label_upregs, gene_lists))
-
         (Path.cwd() / 'out' / f"{name}").mkdir(parents=True, exist_ok=True)
-        cell_scorer(
-            adata,
-            name,
-            gene_list_dict,
-            singscore_fun,
-            obs_name
-            )
+        cell_scorer(adata, name)
 
 
 # cell annotation

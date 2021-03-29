@@ -6,7 +6,8 @@ import scanpy as sc
 from anndata import AnnData, read_h5ad
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
-from PySingscore.singscore import singscore
+from pyscenic.aucell import aucell, derive_auc_threshold
+from pyscenic.genesig import GeneSignature
 
 
 def preprocess_adata(adata):
@@ -117,47 +118,30 @@ def intersection_fun(x): return pd.concat(x, axis=1, join='inner')
 def union_fun(x): return pd.concat(x, axis=1, join='outer')
 
 
+def create_gmt(gene_list_dict):
+    gmt = pd.DataFrame(
+        [val for val in gene_list_dict.values()], 
+        index=[key for key in gene_list_dict.keys()]
+        )
+    gmt.insert(0, "00", "ikarus")
+    gmt.to_csv("out/signatures.gmt", header=None)
+
+
 def cell_scorer(
     adata,
-    name,
-    gene_list_dict,
-    scoring_fun,
-    obs_name
+    name
 ):
+    gs = GeneSignature.from_gmt("out/signatures.gmt", field_separator=',', gene_separator=',')
     df = adata.to_df()
-    df = df.T
-    for label_upreg, gene_list in gene_list_dict.items():
-        all_scores = pd.DataFrame(index=adata.obs[obs_name].values)
-        all_scaled_scores = pd.DataFrame(index=adata.obs[obs_name].values)
-        scores = scoring_fun(gene_list, df)
-        scores = scores['total_score'].values
-        all_scores[label_upreg] = scores
-        all_scaled_scores[label_upreg] = ((scores - scores.min())
-                                          / (scores.max() - scores.min()))
-        all_scores.to_csv(
-            f'out/{name}/{label_upreg}_score.csv',
-            index_label='cells'
+    percentiles = derive_auc_threshold(df)
+    scores = aucell(
+        exp_mtx=df,
+        signatures=gs, 
+        auc_threshold=percentiles[0.01],
+        seed=2, 
+        normalize=True
         )
-        all_scaled_scores.to_csv(
-            f'out/{name}/{label_upreg}_scaled_score.csv',
-            index_label='cells'
-        )
-        adata.obs[f'{label_upreg}_score'] = all_scores[label_upreg].values
-        adata.obs[f'{label_upreg}_scaled_score'] = all_scaled_scores[label_upreg].values
-
-    # adata_out.write(f"out/scored_adata.h5ad")
-
-    # return all_scores, all_scaled_scores, adata
-
-
-def singscore_fun(gene_list, df):
-    return singscore.score(
-        up_gene=gene_list,
-        sample=df,
-        down_gene=False,
-        norm_method='standard',
-        full_data=False
-    )
+    scores.to_csv(f"out/{name}/AUCell_norm_scores.csv", index=False)
 
 
 def cell_annotator(
@@ -264,14 +248,7 @@ def load_scores(
     if "tier_0_hallmark_corrected" in adata.obs.columns:
         adata.obs["tier_0_raw"] = adata.obs["tier_0"]
         adata.obs["tier_0"] = adata.obs["tier_0_hallmark_corrected"]
-
-    scores = pd.DataFrame()
-    fnames = glob.glob(f"out/{name}/*scaled_score.csv")
-    for fname in fnames:
-        s = pd.read_csv(fname, index_col=False)
-        s.drop(["cells"], axis=1, inplace=True)
-        scores = pd.concat([scores, s], axis=1)
-
+    scores = pd.read_csv(f"out/{name}/AUCell_norm_scores.csv", index_col=False)
     result_df = pd.concat(
         [adata.obs.reset_index(drop=True), scores], 
         axis=1

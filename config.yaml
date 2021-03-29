@@ -113,16 +113,14 @@ cell_scorer:
     # If solely cell_scorer is run, gene list(s) must be given as signature(s).
     # Else, this is neglected.
     gene_lists:
-        - 'out/Normal_refined_gene_list.csv'
-        - 'out/Tumor_refined_gene_list.csv'
-        - 'out/Epithelial_refined_gene_list.csv'
+        - 'out/Normal_gene_list.csv'
+        - 'out/Tumor_gene_list.csv'
     
     # If solely cell_scorer is run, upregulated label names must be given
     # corresponding to the order of gene lists. Else, this is neglected.
     label_upregs:
         - 'Normal'
         - 'Tumor'
-        - 'Epithelial'
 
 # paths to the directory of the given input data sets
 # directory must contain cell_labels.csv, genes_symbol.csv and matrix_sparse.npz
@@ -150,13 +148,6 @@ cell_scorer:
 # use the first n cells for test reason
 # null, if using all cells
     n_cells: null
-
-# string column name of adata.obs for each dataset
-# this column contains the cells that should get annotated
-    obs_names:
-        - 'tier_0'
-        - 'tier_0'
-        - 'tier_0'
 
 
 # configurations for cell annotator
@@ -203,7 +194,7 @@ cell_annotator:
     certainty_threshold: 0.7
 
     # number of iterations for label propagation
-    n_iter: 5
+    n_iter: 20
 
     # decide if umap should be calculated
     calc_umap: True
