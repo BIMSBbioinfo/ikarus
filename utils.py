@@ -5,7 +5,6 @@ import pandas as pd
 import scanpy as sc
 from anndata import AnnData, read_h5ad
 from sklearn.linear_model import LogisticRegression
-from sklearn.ensemble import RandomForestClassifier
 from pyscenic.aucell import aucell, derive_auc_threshold
 from pyscenic.genesig import GeneSignature
 
@@ -78,7 +77,6 @@ def gene_selector(
     DE_results_df = DE_results_df.loc[((DE_results_df['padj'] < pval_threshold)
                                        & (DE_results_df['logfoldchanges'] > lfc_threshold))]
     DE_results_df.sort_values(by=sort_by, ascending=sort_ascending, inplace=True)
-    # gene_list = list(DE_results_df['gene_symbol'].values)
     return DE_results_df
 
 
@@ -161,7 +159,6 @@ def cell_annotator(
     X_dict = {}
     y_dict = {}
     Model = LogisticRegression()
-    # Model = RandomForestClassifier()
     for name, obs_name in zip(names_list, obs_names_list):
         X_dict[name] = results_dict[name].loc[:, X_features]
         y_dict[name] = results_dict[name].loc[:, obs_name]
@@ -207,7 +204,7 @@ def label_propagation(results, connectivities, n_iter, certainty_threshold):
         ] = True
 
     for i in range(n_iter):
-        certainty_threshold_pct = certainty_threshold * np.linspace(1, 0, n_iter)[i]
+        certainty_threshold_pct = certainty_threshold * np.exp(-0.3 * i)
         results[f'certain{i}'] = False
         results.loc[
             absdif > absdif.quantile(q=certainty_threshold_pct),
@@ -220,8 +217,9 @@ def label_propagation(results, connectivities, n_iter, certainty_threshold):
         proba_tier_0.loc[:, :] = lp_step_mtx
 
         current = proba_tier_0.idxmax(axis=1)
-        if not i < 5:
+        if not i < 1:
             if ((current != pre).sum() / current.size) < 0.001:
+                print(f'converged at iteration step: {i+1} with {((current != pre).sum() / current.size):.4f} < 0.001')
                 break
         if i == n_iter - 1:
             print(f'Warning: Label propagation did not converge ({((current != pre).sum() / current.size):.4f} >= 0.001) within {n_iter} iterations!')
@@ -253,7 +251,6 @@ def load_scores(
         [adata.obs.reset_index(drop=True), scores], 
         axis=1
     )
-
     return result_df
 
 
