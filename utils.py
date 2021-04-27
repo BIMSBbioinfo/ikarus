@@ -1,10 +1,12 @@
-import yaml
+import glob
 import scipy
 import numpy as np
 import pandas as pd
 import scanpy as sc
 from anndata import AnnData, read_h5ad
-from PySingscore.singscore import singscore
+from sklearn.linear_model import LogisticRegression
+from pyscenic.aucell import aucell, derive_auc_threshold
+from pyscenic.genesig import GeneSignature
 
 
 def preprocess_adata(adata):
@@ -13,15 +15,22 @@ def preprocess_adata(adata):
     return adata
 
 
-def load_adata(path, adata_is_given=False):
+def load_adata(path, adata_is_given=False, sparse_is_given=False):
     if adata_is_given:
         adata = read_h5ad(f'{path}adata.h5ad')
-    else:
+    elif sparse_is_given:
         cl = pd.read_csv(f'{path}cell_labels.csv')
         genes = pd.read_csv(f'{path}genes_symbol.csv', header=None, names=['gene_symbol'])
         genes.index = genes['gene_symbol'].values
         sparse = scipy.sparse.load_npz(f'{path}matrix_sparse.npz')
         adata = AnnData(sparse, var=genes, obs=cl)
+    else:
+        cl = pd.read_csv(f'{path}cell_labels.csv')
+        genes = pd.read_csv(f'{path}genes_symbol.csv', header=None, names=['gene_symbol'])
+        genes.index = genes['gene_symbol'].values
+        dense = pd.read_csv(f'{path}counts.csv', index_col=0)
+        adata = AnnData(dense.reset_index(drop=True), obs=cl.reset_index(drop=True))
+        adata.var = genes
     adata.var_names_make_unique()
     return adata
 
@@ -68,7 +77,6 @@ def gene_selector(
     DE_results_df = DE_results_df.loc[((DE_results_df['padj'] < pval_threshold)
                                        & (DE_results_df['logfoldchanges'] > lfc_threshold))]
     DE_results_df.sort_values(by=sort_by, ascending=sort_ascending, inplace=True)
-    # gene_list = list(DE_results_df['gene_symbol'].values)
     return DE_results_df
 
 
@@ -108,43 +116,160 @@ def intersection_fun(x): return pd.concat(x, axis=1, join='inner')
 def union_fun(x): return pd.concat(x, axis=1, join='outer')
 
 
-def cell_annotator(
+def create_gmt(gene_list_dict):
+    gmt = pd.DataFrame(
+        [val for val in gene_list_dict.values()], 
+        index=[key for key in gene_list_dict.keys()]
+        )
+    gmt.insert(0, "00", "ikarus")
+    gmt.to_csv("out/signatures.gmt", header=None)
+
+
+def cell_scorer(
     adata,
-    gene_list_dict,
-    scoring_fun,
-    obs_name
+    name
 ):
+    gs = GeneSignature.from_gmt("out/signatures.gmt", field_separator=',', gene_separator=',')
     df = adata.to_df()
-    df = df.T
-    for label_upreg, gene_list in gene_list_dict.items():
-        all_scores = pd.DataFrame(index=adata.obs[obs_name].values)
-        all_scaled_scores = pd.DataFrame(index=adata.obs[obs_name].values)
-        scores = scoring_fun(gene_list, df)
-        scores = scores['total_score'].values
-        all_scores[label_upreg] = scores
-        all_scaled_scores[label_upreg] = ((scores - scores.min())
-                                          / (scores.max() - scores.min()))
-        all_scores.to_csv(
-            f'out/{label_upreg}_score.csv',
-            index_label='cells'
+    percentiles = derive_auc_threshold(df)
+    scores = aucell(
+        exp_mtx=df,
+        signatures=gs, 
+        auc_threshold=percentiles[0.01],
+        seed=2, 
+        normalize=True
         )
-        all_scaled_scores.to_csv(
-            f'out/{label_upreg}_scaled_score.csv',
-            index_label='cells'
+    scores.to_csv(f"out/{name}/AUCell_norm_scores.csv", index=False)
+
+
+def cell_annotator(
+    connectivities_dict,
+    results_dict,
+    names_list,
+    obs_names_list,
+    training_names_list,
+    test_name,
+    input_features,
+    certainty_threshold,
+    n_iter
+):
+    # first training, pre label propagation
+    # Tumor vs Normal classification
+    X_features = input_features
+    X_dict = {}
+    y_dict = {}
+    Model = LogisticRegression()
+    for name, obs_name in zip(names_list, obs_names_list):
+        X_dict[name] = results_dict[name].loc[:, X_features]
+        y_dict[name] = results_dict[name].loc[:, obs_name]
+    
+    y_train = pd.concat(
+        [y_dict[name] for name in training_names_list], 
+        axis=0, ignore_index=True)
+    X_train = pd.concat(
+        [X_dict[name] for name in training_names_list], 
+        axis=0, ignore_index=True)
+    X_test = X_dict[test_name]
+    
+    _ = Model.fit(X_train, y_train)
+    y_pred_lr = Model.predict(X_test)
+    y_pred_proba_lr = Model.predict_proba(X_test)
+
+    results_dict[test_name]['LR_proba_Normal'] = y_pred_proba_lr[:, 0]
+    results_dict[test_name]['LR_proba_Tumor'] = y_pred_proba_lr[:, 1]
+    results_dict[test_name]['LR_tier_0_prediction'] = y_pred_lr
+
+    results_dict[test_name] = label_propagation(
+        results_dict[test_name], 
+        connectivities_dict[test_name],
+        n_iter, 
+        certainty_threshold
         )
-        adata.obs[f'{label_upreg}_score'] = all_scores[label_upreg].values
-        adata.obs[f'{label_upreg}_scaled_score'] = all_scaled_scores[label_upreg].values
 
-    # adata_out.write(f"out/scored_adata.h5ad")
-
-    # return all_scores, all_scaled_scores, adata
+    return results_dict[test_name]
 
 
-def singscore_fun(gene_list, df):
-    return singscore.score(
-        up_gene=gene_list,
-        sample=df,
-        down_gene=False,
-        norm_method='standard',
-        full_data=False
+def label_propagation(results, connectivities, n_iter, certainty_threshold):
+    proba_tier_0 = results.loc[
+        :, ['LR_proba_Normal', 'LR_proba_Tumor']
+        ].copy()
+    proba_tier_0.columns = ['Normal', 'Tumor']
+
+    #certain?
+    absdif = abs(results['Normal'] - results['Tumor'])
+    results['certain'] = False
+    results.loc[
+        absdif > absdif.quantile(q=certainty_threshold),
+        'certain'
+        ] = True
+
+    for i in range(n_iter):
+        certainty_threshold_pct = certainty_threshold * np.exp(-0.3 * i)
+        results[f'certain{i}'] = False
+        results.loc[
+            absdif > absdif.quantile(q=certainty_threshold_pct),
+            f'certain{i}'
+            ] = True 
+        proba_tier_0.loc[results[f'certain{i}'] == False] = 0.000001
+                 
+        lp_step_mtx = np.dot(connectivities, proba_tier_0.values)
+        lp_step_mtx = np.divide(lp_step_mtx, lp_step_mtx.sum(axis=1))
+        proba_tier_0.loc[:, :] = lp_step_mtx
+
+        current = proba_tier_0.idxmax(axis=1)
+        if not i < 1:
+            if ((current != pre).sum() / current.size) < 0.001:
+                print(f'converged at iteration step: {i+1} with {((current != pre).sum() / current.size):.4f} < 0.001')
+                break
+        if i == n_iter - 1:
+            print(f'Warning: Label propagation did not converge ({((current != pre).sum() / current.size):.4f} >= 0.001) within {n_iter} iterations!')
+        pre = current
+
+    # get prediction and arrange output file
+    results[
+        'LR_with_label_propagation_tier_0_prediction'
+        ] = proba_tier_0.idxmax(axis=1)
+    results[
+        'LR_with_label_propagation_proba_Normal'
+        ] = proba_tier_0['Normal']
+    results[
+        'LR_with_label_propagation_proba_Tumor'
+        ] = proba_tier_0['Tumor']
+    
+    return results
+
+
+def load_scores(
+    name,
+    adata
+):
+    if "tier_0_hallmark_corrected" in adata.obs.columns:
+        adata.obs["tier_0_raw"] = adata.obs["tier_0"]
+        adata.obs["tier_0"] = adata.obs["tier_0_hallmark_corrected"]
+    scores = pd.read_csv(f"out/{name}/AUCell_norm_scores.csv", index_col=False)
+    result_df = pd.concat(
+        [adata.obs.reset_index(drop=True), scores], 
+        axis=1
     )
+    return result_df
+
+
+def calculate_connectivities(
+    adata,
+    n_neighbors,
+    use_highly_variable
+):
+    sc.pp.highly_variable_genes(adata)
+    sc.tl.pca(adata, use_highly_variable=use_highly_variable)
+    sc.pp.neighbors(adata, n_neighbors=n_neighbors, method='umap')
+    connectivities = adata.obsp['connectivities'].todense()
+    return connectivities
+
+
+def load_connectivities(
+    name
+):
+    connectivities = scipy.sparse.load_npz(
+        f'out/{name}/connectivities_sparse.npz'
+        ).todense()
+    return connectivities

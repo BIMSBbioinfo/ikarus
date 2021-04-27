@@ -1,7 +1,7 @@
 # decide which subtasks to run
 run:
-    gene_selector: True
-    gene_list_integrator: True
+    gene_selector: False
+    cell_scorer: False
     cell_annotator: True
     
     
@@ -24,25 +24,44 @@ gene_selector:
 
 # directly load adata.h5ad instead
     adata_is_given:
+        - False
+        - False
+
+# build adata from sparse matrix (matrix_sparse.npz)
+    sparse_is_given: 
         - True
         - True
 
 # if False make data preprocessing
     is_preprocessed:
-        - True
-        - True
+        - False
+        - False
 
 # string column name of adata.obs
 # this column contains the relevant cell labels
-    obs_name: 'tier_0_hallmark_corrected'
+    obs_name: 'major'
 
 # String name of the cell type which should be considered as up-regulated
-    label_upreg: 'Normal'
+    label_upregs: 
+        - 'Tumor'
+        - 'Tumor'
+        - 'Tumor'
+        - 'Tumor'
+        - 'Tumor'
+        - 'Tumor'
+        - 'Tumor'
 
 # String name of the cell type which should be considered as down-regulated
 # label_upreg is compared to label_downreg
 # if null, label_upreg is compared to everything else in obs_name
-    label_downreg: null
+    label_downregs: 
+        - null
+        - 'Immune'
+        - 'Epithelial'
+        - 'Fibroblast'
+        - 'Pericyte'
+        - 'Other'
+        - 'Endothelial'
 
 # genes are excluded if logfoldchanges < lfc_threshold
     lfc_threshold: 1
@@ -88,31 +107,40 @@ gene_list_integrator:
     top_x: 300
 
 
-# configurations for cell annotator
-cell_annotator:
+# configurations for cell scorer
+cell_scorer:
 
-    # If solely cell_annotator is run, gene list(s) must be given as signature(s).
+    # If solely cell_scorer is run, gene list(s) must be given as signature(s).
     # Else, this is neglected.
     gene_lists:
-        - 'out/Normal_refined_gene_list.csv'
-        - 'out/Tumor_refined_gene_list.csv'
+        - 'out/Normal_gene_list.csv'
+        - 'out/Tumor_gene_list.csv'
     
-    # If solely cell_annoator is run, upregulated label names must be given
+    # If solely cell_scorer is run, upregulated label names must be given
     # corresponding to the order of gene lists. Else, this is neglected.
     label_upregs:
         - 'Normal'
         - 'Tumor'
 
-# path to the directory of the given input data set
+# paths to the directory of the given input data sets
 # directory must contain cell_labels.csv, genes_symbol.csv and matrix_sparse.npz
 # shapes of those files as given in the example (need better description!!)
-    path: '/data/local/jdohmen/ikarus/data/sc_cancer/yeung13_ovarian/'
+    paths:
+        - '/data/local/jdohmen/ikarus/data/sc_cancer/laughney20_lung/'
+        - '/data/local/jdohmen/ikarus/data/sc_cancer/lee20_crc/'
+        - '/data/local/jdohmen/ikarus/data/sc_cancer/tirosh17_headneck/'
 
-# name of the given input data set
-    name: 'yeung'
+# names of the given input data set
+    names:
+        - 'laughney'
+        - 'lee'
+        - 'tirosh'
 
 # directly load adata.h5ad instead
     adata_is_given: True
+
+# build adata from sparse matrix (matrix_sparse.npz)
+    sparse_is_given: False
 
 # if False make data preprocessing
     is_preprocessed: True
@@ -121,6 +149,55 @@ cell_annotator:
 # null, if using all cells
     n_cells: null
 
-# string column name of adata.obs
-# this column contains the cells that should get annotated
-    obs_name: 'tier_0'
+
+# configurations for cell annotator
+# currently only available for tumor vs normal classification
+cell_annotator:
+
+    # paths to the datasets
+    paths:
+        - '/data/local/jdohmen/ikarus/data/sc_cancer/laughney20_lung/'
+        - '/data/local/jdohmen/ikarus/data/sc_cancer/lee20_crc/'
+        - '/data/local/jdohmen/ikarus/data/sc_cancer/tirosh17_headneck/'
+
+    # Names of the datasets
+    names:
+        - 'laughney'
+        - 'lee'
+        - 'tirosh'
+
+    # column name of adata.obs for each dataset
+    # this column contains the cells that should get annotated
+    obs_names:
+        - 'tier_0'
+        - 'tier_0'
+        - 'tier_0'
+    
+    # Assign datasets to either training or test set
+    # currently just one test set allowed
+    # make sure that all datasets of the above are assigned!
+    training_names:
+        - 'laughney'
+        - 'lee'
+    
+    test_name: 'tirosh'
+
+    # connectivities already given, else this will be calculated
+    connectivities_given: False
+
+    # label propagation already done, else this will be calculated
+    label_propagation_done: False
+
+    # threshold for the absolute difference of singscores for which the 
+    # prediction can be considered certain
+    # these are then used as root for label propagation
+    certainty_threshold: 0.9
+
+    # number of iterations for label propagation
+    n_iter: 50
+
+    # decide if umap should be calculated
+    calc_umap: True
+
+    # set a string prefix for saving files
+    save_prefix: ''

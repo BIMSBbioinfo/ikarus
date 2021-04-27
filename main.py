@@ -1,10 +1,8 @@
 import yaml
+import glob
 import argparse
-import scipy
-import numpy as np
+from pathlib import Path
 import pandas as pd
-import scanpy as sc
-from PySingscore.singscore import singscore
 from utils import *
 
 
@@ -33,105 +31,187 @@ with open(args.config_fname) as f:
 # gene selection
 if config['run']['gene_selector']:
     adatas = {}
-    for p, n, a, preproc in zip(
+    for p, n, a, s, preproc in zip(
         config['gene_selector']['paths'],
         config['gene_selector']['names'],
         config['gene_selector']['adata_is_given'],
+        config['gene_selector']['sparse_is_given'],
         config['gene_selector']['is_preprocessed']
     ):
-        adata = load_adata(p, a)
+        adata = load_adata(p, a, s)
         adatas[n] = adata if preproc else preprocess_adata(adata)
         if not a and not preproc:
             adatas[n].write(p + 'adata.h5ad')
 
-    list_of_DE_results_df = [
-        gene_selector(
-            adatas[name],
-            config['gene_selector']['obs_name'],
-            config['gene_selector']['label_upreg'],
-            config['gene_selector']['label_downreg'],
-            config['gene_selector']['lfc_threshold'],
-            config['gene_selector']['pval_threshold'],
-            config['gene_selector']['DE_method'],
-            config['gene_selector']['sort_by'],
-            config['gene_selector']['sort_ascending']
-        ) for name in config['gene_selector']['names']
-    ]
-    list_of_DE_results_df = [d for d in list_of_DE_results_df if d is not None]
-
-
-# gene list integration
-if config['run']['gene_list_integrator']:
-    if config['gene_list_integrator']['integration_fun'] == 'intersection':
-        integration_fun = intersection_fun
-    elif config['gene_list_integrator']['integration_fun'] == 'union':
-        integration_fun = union_fun
-    else:
-        raise("Error: given integration currently not provided. Use 'intersection' or 'union' instead.")
-
-
-    if not config['run']['gene_selector']:
+    label_upregs_list = config['gene_selector']['label_upregs']
+    label_downregs_list = config['gene_selector']['label_downregs']
+    for label_upreg, label_downreg in zip(label_upregs_list, label_downregs_list):
         list_of_DE_results_df = [
-            pd.read_csv(fname) for fname in config['gene_list_integrator']['DE_results_dfs']
+            gene_selector(
+                adatas[name],
+                config['gene_selector']['obs_name'],
+                label_upreg,
+                label_downreg,
+                config['gene_selector']['lfc_threshold'],
+                config['gene_selector']['pval_threshold'],
+                config['gene_selector']['DE_method'],
+                config['gene_selector']['sort_by'],
+                config['gene_selector']['sort_ascending']
+            ) for name in config['gene_selector']['names']
         ]
-    gene_list, DE_results_df = gene_list_integrator(
-        list_of_DE_results_df,
-        integration_fun,
-        config['gene_list_integrator']['integrate_by'],
-        config['gene_list_integrator']['sort_ascending'],
-        config['gene_list_integrator']['top_x']
-    )
-    if config['gene_selector']['label_downreg'] == None or not config['run']['gene_selector']:
-        write_label_downreg = 'all'
+        list_of_DE_results_df = [d for d in list_of_DE_results_df if d is not None]
+
+
+        # gene list integration
+        if config['gene_list_integrator']['integration_fun'] == 'intersection':
+            integration_fun = intersection_fun
+        elif config['gene_list_integrator']['integration_fun'] == 'union':
+            integration_fun = union_fun
+        else:
+            raise("Error: given integration currently not provided. Use 'intersection' or 'union' instead.")
+
+
+        if not config['run']['gene_selector']:
+            list_of_DE_results_df = [
+                pd.read_csv(fname) for fname in config['gene_list_integrator']['DE_results_dfs']
+            ]
+        gene_list, DE_results_df = gene_list_integrator(
+            list_of_DE_results_df,
+            integration_fun,
+            config['gene_list_integrator']['integrate_by'],
+            config['gene_list_integrator']['sort_ascending'],
+            config['gene_list_integrator']['top_x']
+        )
+        if label_downreg == None or not config['run']['gene_selector']:
+            write_label_downreg = 'all'
+        else:
+            write_label_downreg = label_downreg
+        (Path.cwd() / 'out').mkdir(parents=True, exist_ok=True)
+        pd.DataFrame(gene_list).to_csv(
+            (
+                f"out/{label_upreg}"
+                f"_vs_{write_label_downreg}_gene_list.csv"
+            ),
+            header=None,
+            index=None
+        )
+        DE_results_df.to_csv(
+            (
+                f"out/{label_upreg}"
+                f"_vs_{write_label_downreg}_DE_results.csv"
+            ),
+            index=None
+        )
+
+
+# cell scoring
+if config['run']['cell_scorer']:
+    if config['run']['gene_selector']:
+        gene_list_dict = {}
+        for label_upreg, label_downreg in zip(config['gene_selector']['label_upregs'], config['gene_selector']['label_downregs']):
+            if label_downreg == None:
+                write_label_downreg = 'all'
+            else:
+                write_label_downreg = label_downreg
+            gene_list_dict[label_upreg] = pd.read_csv(f"out/{label_upreg}_vs_{write_label_downreg}_gene_list.csv", header=None).values.ravel().tolist()
     else:
-        write_label_downreg = config['gene_selector']['label_downreg']
-    pd.DataFrame(gene_list).to_csv(
-        (
-            f"out/{config['gene_selector']['label_upreg']}"
-            f"_vs_{write_label_downreg}_gene_list.csv"
-        ),
-        header=None,
-        index=None
-    )
-    DE_results_df.to_csv(
-        (
-            f"out/{config['gene_selector']['label_upreg']}"
-            f"_vs_{write_label_downreg}_DE_results.csv"
-        ),
-        index=None
-    )
+        gene_lists = [
+            pd.read_csv(gl, header=None).values.ravel().tolist() for gl in config['cell_scorer']['gene_lists']
+        ]
+        label_upregs = config['cell_scorer']['label_upregs']
+        gene_list_dict = dict(zip(label_upregs, gene_lists))
+    create_gmt(gene_list_dict)
+
+    paths = config['cell_scorer']['paths']
+    names = config['cell_scorer']['names']
+    for path, name in zip(paths, names):
+        adata = load_adata(
+            path,
+            config['cell_scorer']['adata_is_given'],
+            config['cell_scorer']['sparse_is_given']
+        )
+        adata = (
+            adata if config['cell_scorer']['is_preprocessed'] else preprocess_adata(adata)
+        )
+
+        if not config['cell_scorer']['adata_is_given'] and not config['cell_scorer']['is_preprocessed']:
+            adata.write(path + 'adata.h5ad')
+        # use first n cells for test reason
+        adata = (
+            adata[:config['cell_scorer']['n_cells']]
+        )
+
+        (Path.cwd() / 'out' / f"{name}").mkdir(parents=True, exist_ok=True)
+        cell_scorer(adata, name)
 
 
 # cell annotation
 if config['run']['cell_annotator']:
+    save_prefix = config['cell_annotator']['save_prefix']
+    paths = config['cell_annotator']['paths']
+    names = config['cell_annotator']['names']
+    obs_names = config['cell_annotator']['obs_names']
+    test_name = config['cell_annotator']['test_name']
+    training_names = config['cell_annotator']['training_names']
+
+    results = {}
     adatas = {}
-    adata = load_adata(
-        config['cell_annotator']['path'],
-        config['cell_annotator']['adata_is_given']
-    )
-    adatas[config['cell_annotator']['name']] = (
-        adata if config['cell_annotator']['is_preprocessed'] else preprocess_adata(adata)
-    )
+    connectivities = {}
 
-    if not config['cell_annotator']['adata_is_given'] and not config['cell_annotator']['is_preprocessed']:
-        adatas[config['cell_annotator']['name']].write(config['cell_annotator']['path'] + 'adata.h5ad')
-    # use first n cells for test reason
-    adatas[config['cell_annotator']['name']] = (
-        adatas[config['cell_annotator']['name']][:config['cell_annotator']['n_cells']]
-    )
+    for name, path in zip(names, paths):
+        # adata
+        adatas[name] = load_adata(path, adata_is_given=True)
 
-    if config['run']['gene_list_integrator']:
-        gene_list_dict = {config['gene_selector']['label_upreg']: gene_list}
+        # scores
+        results[name] = load_scores(name, adatas[name])
+        
+    # connectivities
+    if config['cell_annotator']['connectivities_given']:
+        connectivities[test_name] = load_connectivities(test_name)
     else:
-        gene_lists = [
-            pd.read_csv(gl, header=None).values.ravel().tolist() for gl in config['cell_annotator']['gene_lists']
-        ]
-        label_upregs = config['cell_annotator']['label_upregs']
-        gene_list_dict = dict(zip(label_upregs, gene_lists))
+        gl_fnames = glob.glob(f'out/*_gene_list.csv')
+        genes = pd.concat(
+            [pd.read_csv(gl_fname, header=None) for gl_fname in gl_fnames],
+            ignore_index=True
+        )
+        genes = genes[0].unique().tolist()
+        genes_in_var = list(set(genes) & set(adatas[test_name].var['gene_symbol'].values.tolist()))
+        
+        connectivities[test_name] = calculate_connectivities(
+            adatas[test_name][:, genes_in_var], 
+            n_neighbors=100,
+            use_highly_variable=False
+            )
+        sparse = scipy.sparse.csr_matrix(connectivities[test_name])
+        scipy.sparse.save_npz(f'out/{test_name}/connectivities_sparse.npz', sparse)
 
-    cell_annotator(
-        adatas[config['cell_annotator']['name']],
-        gene_list_dict,
-        singscore_fun,
-        config['cell_annotator']['obs_name'])
+    input_features = [
+        'Tumor',
+        'Normal'
+    ]
+    # pre-prediction & label propagation
+    results[test_name] = cell_annotator(
+        connectivities, 
+        results,
+        names,
+        obs_names,
+        training_names,
+        test_name,
+        input_features,
+        config['cell_annotator']['certainty_threshold'],
+        config['cell_annotator']['n_iter']
+        )
 
+    results[test_name].to_csv(f"out/{test_name}/results_final{save_prefix}.csv")
+
+    if config['cell_annotator']['calc_umap']:
+        np.random.seed(0)
+        adatas[test_name].obs['LR_with_label_propagation_tier_0_prediction'] = results[test_name]['LR_with_label_propagation_tier_0_prediction'].values
+        adatas[test_name].obs['LR_tier_0_prediction'] = results[test_name]['LR_tier_0_prediction'].values
+        adatas[test_name].obs['certain'] = results[test_name]['certain'].values
+
+        sc.tl.pca(adatas[test_name], random_state=0)
+        sc.pp.neighbors(adatas[test_name], n_neighbors=100, method='umap')
+
+        sc.tl.umap(adatas[test_name], random_state=0)
+        adatas[test_name].write_h5ad(f"out/{test_name}/adatas_umap{save_prefix}.h5ad")
