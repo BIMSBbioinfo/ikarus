@@ -26,9 +26,11 @@ def select_genes(
     else:
         unique_labels = np.unique(adata.obs[obs_name])
         if label_upreg not in unique_labels or label_downreg not in unique_labels:
-            raise IndexError(
-                f"Either {label_upreg} or {label_downreg} is not available in given obs_name."
+            print(
+                f"Either {label_upreg} or {label_downreg} is not available in given obs_name. "
+                f"None is returned."
             )
+            return None
 
     adata = sc.tl.rank_genes_groups(
         adata,
