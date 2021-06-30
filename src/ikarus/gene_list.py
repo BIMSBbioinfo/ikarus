@@ -9,7 +9,7 @@ def select_genes(
     obs_name,
     label_upreg,
     label_downreg=None,
-    lfc_threshold=3,
+    lfc_threshold=1,
     pval_threshold=0.1,
     DE_method="t-test_overestim_var",
     sort_by="logfoldchanges",
