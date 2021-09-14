@@ -9,7 +9,6 @@ setup(
         'scipy',
         'scanpy',
         'anndata',
-        'PyYAML',
         'pyscenic'
     ]
 )
