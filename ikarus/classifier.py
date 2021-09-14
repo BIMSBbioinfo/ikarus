@@ -254,3 +254,46 @@ class Ikarus:
     def load_core_model(self, core_model_path):
         self.core_model = joblib.load(core_model_path)
         self.fitted = True
+
+    def cnv_correct(self, cnv_df, adata, name, connectivities_path=None, save=False):
+        from sklearn.linear_model import LogisticRegression
+        X = cnv_df
+        y = self.results["final_pred"].values
+        model = LogisticRegression()
+        model.fit(X, y)
+        y_pred = model.predict(X)
+
+        # optional: repeat label propagation
+        y_pred_proba = model.predict_proba(X)
+        if not connectivities_path:
+            connectivities = calculate_connectivities(
+                adata,
+                name,
+                self.signatures_gmt,
+                self.n_neighbors,
+                self.use_highly_variable,
+                self.out_dir,
+            )
+        else:
+            connectivities = load_npz(connectivities_path).todense()
+            if connectivities.shape[0] != adata.shape[0]:
+                raise IndexError(
+                    f"Shape of connectivities matrix ({connectivities.shape}) does "
+                    f"not match number of cells ({adata.shape[0]}). Please check "
+                    f"if provided connectivity matrix corresponds to adata."
+                )
+
+        y_pred, _ = propagate_labels(
+            pd.DataFrame(y_pred_proba, columns=model.classes_.tolist()),
+            pd.DataFrame(y_pred_proba, columns=model.classes_.tolist()),
+            connectivities,
+            self.n_iter,
+            self.certainty_threshold,
+        )
+
+        self.results["final_pred_cnv_corrected"] = y_pred
+        if save and name:
+            path = Path.cwd() / self.out_dir / name
+            path.mkdir(parents=True, exist_ok=True)
+            self.results.to_csv(path / "prediction.csv")
+        return y_pred
