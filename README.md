@@ -2,7 +2,7 @@
 Ikarus is a stepwise machine learning pipeline that tries to cope with a task of distinguishing tumor cells from normal cells. Leveraging multiple annotated single cell datasets it can be used to define a gene set specific to tumor cells. First, the latter gene set is used to rank cells and then to train a logistic classifier for the robust classification of tumor and normal cells. Finally, sensitivity is increased by propagating the cell labels based on a custom cell-cell network. Ikarus is tested on multiple single cell datasets to ascertain that it achieves high sensitivity and specificity in multiple experimental contexts. 
 
 <p align="center">
-  <img width="460" height="300" src="ikarus_scheme.png">
+  <img width="720" height="480" src="ikarus_scheme.png">
 </p>
 
 ## Installation
