@@ -3,11 +3,16 @@ Ikarus is a stepwise machine learning pipeline that tries to cope with a task of
 
 
 ## Installation
-Ikarus can be installed by cloning the repo, navigating into the directory and running:
+Make sure you are using python >= 3.8 before installing ikarus. If that requirement is fulfilled, ikarus can be installed from a gitthub repo:
 ```
+git clone https://github.com/BIMSBbioinfo/ikarus.git
+cd ikarus
 pip install -e .
 ```
-
+Alterantively, one can install ikarus' master branch directly from github:
+```
+python -m pip install git+https://github.com/BIMSBbioinfo/ikarus.git
+```
 
 ## Usage
 The easiest option to get started is to use the provided Tumor/Normal gene lists and the pretrained model.
