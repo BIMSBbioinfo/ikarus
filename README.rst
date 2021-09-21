@@ -8,7 +8,7 @@ First, the latter gene set is used to rank cells and then to train a logistic cl
 Finally, sensitivity is increased by propagating the cell labels based on a custom cell-cell network. 
 Ikarus is tested on multiple single cell datasets to ascertain that it achieves high sensitivity and specificity in multiple experimental contexts. 
 
-.. image:: ikarus_scheme.pdf
+.. image:: ikarus_schema.pdf
   :width: 600
   
   
@@ -43,9 +43,11 @@ The easiest option to get started is to use the provided Tumor/Normal gene lists
  
 More information on how to train a model or how to create own gene lists is provided in the tutorial notebook.
 +----------------------------------------------------+
-| Tutorial notebooks                                 |
+| Example notebooks                                  |
 +====================================================+
-| `Data preparation and basic prediction`_           |
+| `Data preparation PBMC integration`_               |
++----------------------------------------------------+
+| `Using BAVARIA to integrate PBMC data`_            |
 +----------------------------------------------------+
 
 .. _`Data preparation and basic prediction`: https://github.com/BIMSBbioinfo/ikarus/blob/master/tutorial.ipynb
