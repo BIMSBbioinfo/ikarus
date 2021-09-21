@@ -14,7 +14,7 @@ Ikarus is tested on multiple single cell datasets to ascertain that it achieves 
   
 Installation
 ============
-Make sure you are using python >= 3.8 before installing ikarus. If that requirement is fulfilled, ikarus can be installed from a gitthub repo:
+Make sure you are using :code:`python >= 3.8` before installing ikarus. If that requirement is fulfilled, ikarus can be installed from a gitthub repo:
 
 ::
 
@@ -42,6 +42,9 @@ The easiest option to get started is to use the provided Tumor/Normal gene lists
   
  
 More information on how to train a model or how to create own gene lists is provided in the tutorial notebook.
+
+..
+
 +----------------------------------------------------+
 | Example notebooks                                  |
 +====================================================+
