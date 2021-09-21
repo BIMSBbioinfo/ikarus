@@ -31,11 +31,12 @@ Alterantively, one can install ikarus' master branch directly from github:
 
 Usage
 =============
-The easiest option to get started is to use the provided Tumor/Normal gene lists and the pretrained model.
+The easiest option to get started is to use the provided Tumor/Normal gene lists and the pretrained model:
 
 ::
 
   from ikarus import classifier
+  
   model = classifier.Ikarus(signatures_gmt=signatures_path)
   model.load_core_model(model_path)
   predictions = model.predict(test_adata, 'test_name')
@@ -48,9 +49,7 @@ More information on how to train a model or how to create own gene lists is prov
 +----------------------------------------------------+
 | Example notebooks                                  |
 +====================================================+
-| `Data preparation PBMC integration`_               |
-+----------------------------------------------------+
-| `Using BAVARIA to integrate PBMC data`_            |
+| `Data preparation and basic prediction`_           |
 +----------------------------------------------------+
 
 .. _`Data preparation and basic prediction`: https://github.com/BIMSBbioinfo/ikarus/blob/master/tutorial.ipynb
