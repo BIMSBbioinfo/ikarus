@@ -8,7 +8,7 @@ First, the latter gene set is used to rank cells and then to train a logistic cl
 Finally, sensitivity is increased by propagating the cell labels based on a custom cell-cell network. 
 Ikarus is tested on multiple single cell datasets to ascertain that it achieves high sensitivity and specificity in multiple experimental contexts. 
 
-.. image:: ikarus_schema.pdf
+.. image:: ikarus_schema.svg
   :width: 600
   
   
