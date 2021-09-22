@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import scanpy as sc
 from pathlib import Path
+from ikarus import utils
 
 
 def select_genes(
@@ -87,6 +88,39 @@ def integrate(
     gene_list = list(DE_df.index.values)
     gene_list = gene_list[: int(top_x)] if len(gene_list) >= top_x else gene_list
     return gene_list, DE_df
+
+
+def create_all(
+    label_upregs_list,
+    label_downregs_list,
+    adatas_dict,
+    names_list,
+    obs_names_list,
+    integration_fun=utils.intersection_fun,
+    top_x=300
+):
+    signatures = {}
+    for label_upreg, label_downreg in zip(label_upregs_list, label_downregs_list):
+        DE_dfs_list = []
+        for name, obs_name in zip(names_list, obs_names_list):
+            DE_dfs_list.append(
+                select_genes(
+                    adatas_dict[name], 
+                    obs_name,
+                    label_upreg, 
+                    label_downreg
+                )
+            )
+        # If either label_upreg or label_downreg is not available in the provided data set
+        # 'select_genes' returns None 
+        # before continuing we have to remove all the Nones from the DE dataframe list
+        DE_dfs_list = [d for d in DE_dfs_list if d is not None]
+        signatures[f"{label_upreg}_vs_{label_downreg}"], _ = integrate(
+            DE_dfs_list, 
+            integration_fun=integration_fun,
+            top_x=top_x
+        )
+    return signatures
 
 
 def save_gmt(gene_lists, gene_list_names, out_dir):
