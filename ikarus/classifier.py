@@ -99,6 +99,33 @@ def propagate_labels(
     return final_pred_proba.idxmax(axis=1), final_pred_proba
 
 
+def check_signatures_overlap(
+    signatures_gmt, adata, name, out_dir, adapt_signatures
+):
+    if not adapt_signatures:
+        return signatures_gmt
+    
+    sig = pd.read_csv(signatures_gmt, header=None, sep="\t")
+    tumor_genes = sig.loc[(sig == "Tumor").any(axis=1), 2:].dropna(axis=1).values.flatten().tolist()
+    tumor_genes_in_var = list(set(tumor_genes) & set(adata.var["gene_symbol"].values.tolist()))
+    normal_genes = sig.loc[(sig == "Normal").any(axis=1), 2:].dropna(axis=1).values.flatten().tolist()
+    normal_genes_in_var = list(set(normal_genes) & set(adata.var["gene_symbol"].values.tolist()))
+    if (len(tumor_genes_in_var) / len(tumor_genes) < 0.8) or (len(normal_genes_in_var) / len(normal_genes) < 0.8):
+        gmt = pd.DataFrame([normal_genes_in_var, tumor_genes_in_var], index=["Normal", "Tumor"])
+        gmt.insert(0, "00", "ikarus")
+        path = Path.cwd() / out_dir / name
+        path.mkdir(parents=True, exist_ok=True)
+        gmt.to_csv(path / "signatures_tmp.gmt", header=None, sep="\t")
+        print(
+            f"Less than 80% of signature genes are available in data set. "
+            f"A temporary signature is stored where non-overlapping genes are removed. "
+            f"It is proceeded with the temporary signature."
+        )
+        return path / "signatures_tmp.gmt"
+    else:
+        return signatures_gmt
+    
+
 class Ikarus:
     def __init__(
         self,
@@ -108,6 +135,7 @@ class Ikarus:
         core_model="LogisticRegression",
         n_neighbors=100,
         use_highly_variable=False,
+        adapt_signatures=False,
         n_iter=50,
         certainty_threshold=0.9,
     ):
@@ -118,6 +146,7 @@ class Ikarus:
         self.core_model = init_core_model(core_model)
         self.n_neighbors = n_neighbors
         self.use_highly_variable = use_highly_variable
+        self.adapt_signatures = adapt_signatures
         self.n_iter = n_iter
         self.certainty_threshold = certainty_threshold
         self.fitted = False
@@ -134,7 +163,10 @@ class Ikarus:
         if not scores_path_list:
             scores_path_list = []
             for adata, name in zip(adatas_list, names_list):
-                score_cells(adata, name, self.signatures_gmt, self.out_dir, self.scorer)
+                signatures_gmt = check_signatures_overlap(
+                    self.signatures_gmt, adata, name, self.out_dir, self.adapt_signatures
+                )
+                score_cells(adata, name, signatures_gmt, self.out_dir, self.scorer)
                 # Future: return scores directly from function score_cells instead
                 # of building path here. For this it needs to be checked if read
                 # scores and returned scores are of the same structure.
@@ -176,7 +208,10 @@ class Ikarus:
             raise RuntimeError("Model not yet fitted. Please run Model.fit(...) first!")
 
         if not scores_path:
-            score_cells(adata, name, self.signatures_gmt, self.out_dir, self.scorer)
+            signatures_gmt = check_signatures_overlap(
+                self.signatures_gmt, adata, name, self.out_dir, self.adapt_signatures
+            )
+            score_cells(adata, name, signatures_gmt, self.out_dir, self.scorer)
             # Future: return scores directly from function score_cells instead
             # of building path here. For this it needs to be checked if read
             # scores and returned scores are of the same structure.
@@ -194,10 +229,13 @@ class Ikarus:
             self.results[f"core_pred_proba_{scoring_label}"] = y_pred_proba[:, i]
 
         if not connectivities_path:
+            signatures_gmt = check_signatures_overlap(
+                self.signatures_gmt, adata, name, self.out_dir, self.adapt_signatures
+            )
             connectivities = calculate_connectivities(
                 adata,
                 name,
-                self.signatures_gmt,
+                signatures_gmt,
                 self.n_neighbors,
                 self.use_highly_variable,
                 self.out_dir,
@@ -269,10 +307,13 @@ class Ikarus:
         if label_propagation:
             y_pred_proba = model.predict_proba(X)
             if not connectivities_path:
+                signatures_gmt = check_signatures_overlap(
+                    self.signatures_gmt, adata, name, self.out_dir, self.adapt_signatures
+                )
                 connectivities = calculate_connectivities(
                     adata,
                     name,
-                    self.signatures_gmt,
+                    signatures_gmt,
                     self.n_neighbors,
                     self.use_highly_variable,
                     self.out_dir,
