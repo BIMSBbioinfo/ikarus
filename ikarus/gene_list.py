@@ -16,6 +16,14 @@ def select_genes(
     sort_by="logfoldchanges",
     sort_ascending=False,
 ):
+    """Method selects genes for further consideration.
+    
+    t-test with overestimated variance is used to compute an 
+    approximation of log 2 fold changes between two cell groups.
+    Select genes coping with thresholds for log 2 fold changes 
+    and p-val. 
+    """
+    
     if label_downreg is None:
         adata = adata.copy()
         adata.obs["1_vs_all"] = [
@@ -65,6 +73,13 @@ def integrate(
     sort_ascending=False,
     top_x=100,
 ):
+    """Method integrates pair-wise signatures of different datasets.
+    
+    For each pair-wise signature compute the weighted average of 
+    log 2 fold changes of genes across different datasets. Sort 
+    genes accordingly and pick top_x genes.
+    """
+    
     dfs = [df.copy() for df in DE_dfs_list]
     if len(dfs) == 0:
         raise RuntimeError(
@@ -99,6 +114,46 @@ def create_all(
     integration_fun=utils.intersection_fun,
     top_x=300
 ):
+    """Method creates multiple pair-wise gene list signatures.
+    
+    Loop over all pair-wise comparisons and over given input datasets,
+    and perform t-tests with overestimated variance so that one obtains 
+    for each gene n (one for each dataset) estimates of log2fold changes.
+    For integrating the outcome of all datasets, it is considered the 
+    intersection or union of genes available in different datasets. Then 
+    for each gene the weighted average of log2fold changes is computed. 
+    For each pair-wise comparison it is taken the top_x of upregulated 
+    (highest averaged log2fold changes) genes.
+    
+    Parameters
+    ----------
+    label_upregs_list : list of str
+        label which should be considered up-regulated. Should be available 
+        in the given obs column of the anndata object.
+    label_downregs_list : list of str
+        label which should be considered down-regulated. Should be available 
+        in the given obs column of the anndata object.
+    adatas_dict : dict {"name": anndata_object}
+        given anndata objects (dict value) with the corresponding names
+        (dict key).
+    names_list : list of str
+        names of anndata objects in accordance to adatas_dict keys.
+    obs_names_list : list of str
+        for each anndata object in adatas_dict the corresponding obs column 
+        where to search for up- or down-regulated labels.
+    integration_fun : function
+        function to integrate target genes from different datasets. Supported
+        "utils.intersection_fun" and "utils.union_fun".
+    top_x : int
+        for each pair-wise comparison take the top_x genes with highest 
+        averaged (across datasets) log2fold changes.
+        
+    Returns
+    -------
+    dict : {"{label_upreg}_vs_{label_downreg}": signature}
+        Returns dict of all pair-wise signatures.
+    """
+    
     signatures = {}
     for label_upreg, label_downreg in zip(label_upregs_list, label_downregs_list):
         DE_dfs_list = []
