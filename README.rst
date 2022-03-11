@@ -1,3 +1,5 @@
+|3.8 badge| |3.9 badge| |3.10 badge|
+
 ========
 Ikarus
 ========
@@ -15,13 +17,11 @@ Please find more information in `our preprint <https://doi.org/10.1101/2021.10.1
   
 Installation
 ============
-Make sure you are using :code:`python >= 3.8` before installing ikarus. If that requirement is fulfilled, ikarus can be installed from a gitthub repo:
+Ikarus currently supports :code:`python 3.8`, and can be installed from PyPI:
 
 ::
 
-  git clone https://github.com/BIMSBbioinfo/ikarus.git
-  cd ikarus
-  pip install -e .
+  pip install ikarus
  
 Alterantively, one can install ikarus' master branch directly from github:
  
@@ -54,7 +54,9 @@ More information on how to train a model or how to create own gene lists is prov
 +----------------------------------------------------+
 
 .. _`Data preparation and basic prediction`: https://github.com/BIMSBbioinfo/ikarus/blob/master/tutorial.ipynb
-
-
- 
- 
+.. |3.8 badge| image:: https://github.com/BIMSBbioinfo/ikarus/actions/workflows/python-package-3.8.yml/badge.svg
+    :target: https://github.com/BIMSBbioinfo/ikarus/actions/workflows/python-package-3.8.yml
+.. |3.9 badge| image:: https://github.com/BIMSBbioinfo/ikarus/actions/workflows/python-package-3.9.yml/badge.svg
+    :target: https://github.com/BIMSBbioinfo/ikarus/actions/workflows/python-package-3.9.yml
+.. |3.10 badge| image:: https://github.com/BIMSBbioinfo/ikarus/actions/workflows/python-package-3.10.yml/badge.svg
+    :target: https://github.com/BIMSBbioinfo/ikarus/actions/workflows/python-package-3.10.yml
