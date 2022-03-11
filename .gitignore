@@ -1,6 +1,6 @@
-__pychache__/
+**/__pycache__/
 *.egg-info/
 *.egg
-
 out/*/
-
+build/
+dist/
