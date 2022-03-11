@@ -1,4 +1,4 @@
-|3.8 badge| |3.9 badge| |3.10 badge|
+|3.8 badge| |3.9 badge| |3.10 badge| |PyPI version|
 
 ========
 Ikarus
@@ -60,3 +60,5 @@ More information on how to train a model or how to create own gene lists is prov
     :target: https://github.com/BIMSBbioinfo/ikarus/actions/workflows/python-package-3.9.yml
 .. |3.10 badge| image:: https://github.com/BIMSBbioinfo/ikarus/actions/workflows/python-package-3.10.yml/badge.svg
     :target: https://github.com/BIMSBbioinfo/ikarus/actions/workflows/python-package-3.10.yml
+.. |PyPI version| image:: https://badge.fury.io/py/ikarus.svg
+    :target: https://pypi.org/project/ikarus/
