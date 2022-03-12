@@ -1,0 +1,148 @@
+---
+title: "ikarus cancer cell classification in R"
+author: "Vedran Franke"
+email: "vedran.franke@mdc-berlin.de"
+date: "today"
+output: 
+  html_notebook:
+    toc: true
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Preliminaries
+
+## Setup the conda environment
+
+Here we install the appopriate python version, along with all
+of the required R and python packages.
+
+```{python, eval=FALSE}
+conda create  -y -n ikar3.8 -python=3.8
+conda install -y libgcc
+conda install -y r-essentials r-base
+conda install -y -c bioconda bioconductor-biocinstaller bioconductor-zellkonverter bioconductor-singlecellexperiment
+conda install -y r-seurat
+pip install git+https://github.com/BIMSBbioinfo/ikarus.git
+```
+
+
+# Load the conda environment in R
+
+Start the R interpreter, load **reticulate**, and
+load the conda environment.
+
+**conda_path** should contain the path to the installed conda environment.
+
+```{r load_reticulate}
+library(reticulate)
+conda_path = c("~/bin/Software/miniconda3/envs/ikar3.8")
+use_condaenv(conda_path)
+```
+
+
+# Data preparation
+
+## Download the ikarus model
+
+```{r download_model}
+trained_model_path = "https://github.com/BIMSBbioinfo/ikarus/raw/master/out_tutorial/core_model.joblib"
+
+download.file(trained_model_path, "core_model.joblib")
+```
+
+### Download gene signatures
+
+```{r download_signatures}
+signatures_path = "https://github.com/BIMSBbioinfo/ikarus/raw/master/out_tutorial/signatures.gmt"
+download.file(signatures_path, "signatures.gmt")
+```
+
+# Run Ikarus
+
+## Download the adata
+
+```{r download_data}
+adata_path = "https://bimsbstatic.mdc-berlin.de/akalin/Ikarus/part_1/data/tirosh17_headneck/adata.h5ad"
+download.file(adata_path, "tirosh_adata.h5ad")
+```
+
+## Read the h5ad into an anndata object
+
+```{r read_anndata}
+anndata = import("anndata")
+adata = anndata$read_h5ad("tirosh_adata.h5ad")
+```
+
+## Load the trained ikarus model
+
+```{r load_ikarus}
+ikarus = import("ikarus")
+model  = ikarus$classifier$Ikarus(
+     
+  signatures_gmt = file.path("signatures.gmt"), 
+  out_dir="ikarus_path"
+)
+model$load_core_model("core_model.joblib")
+```
+
+## Predict the cell class
+
+```{r predict_cell_class}
+class_predict = model$predict(adata, "test")
+```
+
+## Look at the prediction results
+
+```{r compare_results}
+results = data.frame(
+  true = adata$obs$tier_0,
+  pred = class_predict
+)
+with(results, table(true, pred))
+
+```
+
+
+# MISC helpers
+
+## Seurat to SingleCellExperiment
+
+```{r seurat_to_singleCellExperiment, eval=FALSE}
+sce = SingleCellExperiment(
+  assays = list(counts = GetAssayData(seu, "counts", "RNA"),
+  colData = DataFrame(seu@meta.data)
+) 
+```
+
+
+## Convert **SingleCellExperiment** to **AnnData**
+
+
+```{r, singlecellexperiment_to_anndata, eval=FALSE}
+library(basilisk)
+adata = basiliskRun(fun = function(sce) {
+     # Convert SCE to AnnData:
+     SCE2AnnData(sce)
+     
+}, env = conda_path, sce = sce)
+```
+
+## Process count data using ikarus
+
+If the input **adata** object contains counts, the matrix
+can be processed using ikarus **preprocess_adata** function.
+
+If the data is already normalized, no preprocessing is required
+
+**IMPORTANT** the data should not be scaled!
+
+```{r process_data, eval=FALSE}
+adata = ikarus$data$preprocess_adata(adata)
+```
+
+
+
