@@ -53,7 +53,7 @@ More information on how to train a model or how to create own gene lists is prov
 | `Data preparation and basic prediction`_           |
 +----------------------------------------------------+
 
-.. _`Data preparation and basic prediction`: https://github.com/BIMSBbioinfo/ikarus/blob/master/tutorial.ipynb
+.. _`Data preparation and basic prediction`: https://github.com/BIMSBbioinfo/ikarus/blob/master/tutorials/tutorial.ipynb
 .. |3.8 badge| image:: https://github.com/BIMSBbioinfo/ikarus/actions/workflows/python-package-3.8.yml/badge.svg
     :target: https://github.com/BIMSBbioinfo/ikarus/actions/workflows/python-package-3.8.yml
 .. |3.9 badge| image:: https://github.com/BIMSBbioinfo/ikarus/actions/workflows/python-package-3.9.yml/badge.svg
