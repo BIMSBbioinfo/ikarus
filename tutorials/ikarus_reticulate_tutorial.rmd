@@ -49,7 +49,7 @@ use_condaenv(conda_path)
 ## Download the ikarus model
 
 ```{r download_model}
-trained_model_path = "https://github.com/BIMSBbioinfo/ikarus/raw/master/out_tutorial/core_model.joblib"
+trained_model_path = "https://github.com/BIMSBbioinfo/ikarus/raw/master/tutorials/out/core_model.joblib"
 
 download.file(trained_model_path, "core_model.joblib")
 ```
@@ -57,7 +57,7 @@ download.file(trained_model_path, "core_model.joblib")
 ### Download gene signatures
 
 ```{r download_signatures}
-signatures_path = "https://github.com/BIMSBbioinfo/ikarus/raw/master/out_tutorial/signatures.gmt"
+signatures_path = "https://github.com/BIMSBbioinfo/ikarus/raw/master/tutorials/out/signatures.gmt"
 download.file(signatures_path, "signatures.gmt")
 ```
 
