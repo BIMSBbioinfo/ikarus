@@ -6,7 +6,7 @@ from pathlib import Path
 from sklearn.linear_model import LogisticRegression
 from scipy.sparse import save_npz, load_npz
 from pyscenic.aucell import aucell, derive_auc_threshold
-from pyscenic.genesig import GeneSignature
+from ctxcore.genesig import GeneSignature
 
 
 def init_core_model(core_model_str):

@@ -15,6 +15,7 @@ setup(
         'scipy',
         'scanpy',
         'anndata',
-        'pyscenic'
+        'pyscenic',
+        'ctxcore'
     ]
 )
