@@ -17,7 +17,7 @@ Please find more information in `our preprint <https://doi.org/10.1101/2021.10.1
   
 Installation
 ============
-ikarus currently supports :code:`python 3.8`, and can be installed from PyPI:
+ikarus currently supports :code:`python>=3.8`, and can be installed from PyPI:
 
 ::
 
