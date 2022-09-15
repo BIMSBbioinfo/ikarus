@@ -9,7 +9,7 @@ Leveraging multiple annotated single cell datasets it can be used to define a ge
 First, the latter gene set is used to rank cells and then to train a logistic classifier for the robust classification of tumor and normal cells.
 Finally, sensitivity is increased by propagating the cell labels based on a custom cell-cell network. 
 ikarus is tested on multiple single cell datasets to ascertain that it achieves high sensitivity and specificity in multiple experimental contexts.
-Please find more information in `our preprint <https://doi.org/10.1101/2021.10.15.463909>`_.
+Please find more information in the corresponding `publication <https://genomebiology.biomedcentral.com/articles/10.1186/s13059-022-02683-1>`_.
 
 .. image:: ikarus_schema.svg
   :width: 600
