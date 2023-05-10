@@ -5,7 +5,7 @@ with open("README.rst", "r") as fh:
 
 setup(
     name='ikarus',
-    version='0.0.2',
+    version='0.0.3',
     packages=['ikarus'],
     desription='Machine Learning classifier of tumor cells',
     license='MIT',
