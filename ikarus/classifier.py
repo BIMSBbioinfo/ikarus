@@ -82,7 +82,7 @@ def calculate_connectivities(
     path = Path.cwd() / out_dir / name
     path.mkdir(parents=True, exist_ok=True)
     save_npz(path / "connectivities_sparse.npz", sparse)
-    return sparse.todense()
+    return sparse
 
 
 def propagate_labels(
@@ -113,7 +113,7 @@ def propagate_labels(
         ] = True
         final_pred_proba.loc[certainty_info[f"certain{i}"] == False] = 0.000001
 
-        final_step_mtx = np.dot(connectivities, final_pred_proba.values)
+        final_step_mtx = connectivities.dot(final_pred_proba.values)
         final_step_mtx = np.divide(final_step_mtx, final_step_mtx.sum(axis=1))
         final_pred_proba.loc[:, :] = final_step_mtx
 
@@ -393,7 +393,7 @@ class Ikarus:
                 self.out_dir,
             )
         else:
-            connectivities = load_npz(connectivities_path).todense()
+            connectivities = load_npz(connectivities_path)
             if connectivities.shape[0] != adata.shape[0]:
                 raise IndexError(
                     f"Shape of connectivities matrix ({connectivities.shape}) does "
@@ -550,7 +550,7 @@ class Ikarus:
                     self.out_dir,
                 )
             else:
-                connectivities = load_npz(connectivities_path).todense()
+                connectivities = load_npz(connectivities_path)
                 if connectivities.shape[0] != adata.shape[0]:
                     raise IndexError(
                         f"Shape of connectivities matrix ({connectivities.shape}) does "
