@@ -114,7 +114,7 @@ def propagate_labels(
         final_pred_proba.loc[certainty_info[f"certain{i}"] == False] = 0.000001
 
         final_step_mtx = connectivities.dot(final_pred_proba.values)
-        final_step_mtx = np.divide(final_step_mtx, final_step_mtx.sum(axis=1))
+        final_step_mtx = np.divide(final_step_mtx, final_step_mtx.sum(axis=0))
         final_pred_proba.loc[:, :] = final_step_mtx
 
         current = final_pred_proba.idxmax(axis=1)
